@@ -1,0 +1,46 @@
+name: Build Windows installer
+
+# Trigger manually (Actions tab -> Run workflow) or by pushing a version tag (v*).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+# Lets the built-in GITHUB_TOKEN create/update the GitHub Release.
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer/main/preload
+        run: npm run build
+
+      - name: Package + publish to GitHub Release (draft)
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No code-signing certificate; skip signing cleanly.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Also expose the installer as a run artifact for quick testing without a release.
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: peachwhip-windows
+          path: |
+            dist/*.exe
+            dist/latest.yml
+          if-no-files-found: warn

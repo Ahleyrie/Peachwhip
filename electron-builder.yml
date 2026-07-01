@@ -24,9 +24,11 @@ linux:
   target:
     - AppImage
   category: AudioVideo
-# Self-update feed. Point this at your Cloudflare R2 (or any static host) once set up.
-# electron-builder will upload build artifacts here on `publish`, and the app reads
-# the same URL to check for / download updates. Placeholder for now.
+# Self-update feed = GitHub Releases. CI publishes the installer + latest.yml to a
+# release; the in-app updater reads the latest PUBLISHED (non-draft) release.
+# Works keyless for a public repo. (If the repo goes private, auto-update would need
+# a token or a switch to a generic/R2 feed.)
 publish:
-  provider: generic
-  url: https://REPLACE-ME.r2.dev/peachwhip/
+  provider: github
+  owner: Ahleyrie
+  repo: Peachwhip
