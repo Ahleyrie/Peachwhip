@@ -1,5 +1,8 @@
-// RedGifs source — a TypeScript port of the endpoints/headers used by the
-// `redgifs` Python library (MIT, scrazzz). Uses Node's global fetch (Node 18+).
+// RedGifs — a TypeScript port of the endpoints/headers used by the `redgifs`
+// Python library (MIT, scrazzz). Split into:
+//   • RedgifsClient — auth + raw API calls (reused by the Reddit source to resolve
+//     redgifs.com links into playable MP4s)
+//   • RedGifsSource — the browsable Source built on top of the client
 //
 // Auth: GET /v2/auth/temporary -> { token }; sent as `Authorization: Bearer <token>`.
 // The temporary token is IP/UA-bound and lasts ~24h, so we cache and refresh it
@@ -38,7 +41,7 @@ interface RgMediaUrls {
   vthumbnail?: string
 }
 
-interface RgGif {
+export interface RgGif {
   id: string
   userName?: string
   createDate?: number
@@ -59,31 +62,39 @@ interface RgSearchResponse {
   gifs: RgGif[]
 }
 
-class RedGifsSource implements Source {
-  readonly id = 'redgifs'
-  readonly label = 'RedGifs'
-  readonly searchable = true
-  readonly orders = ORDERS
-  readonly defaultOrder = 'trending'
+/** Normalized playable media extracted from a single gif. */
+export interface RgResolved {
+  streamUrl?: string
+  poster?: string
+  thumbnail?: string
+  hasAudio?: boolean
+  duration?: number
+  width?: number
+  height?: number
+}
 
-  private readonly fetch: FetchLike
+/** Extract a redgifs id from a watch/embed URL, or null if it isn't one. */
+export function extractRedgifsId(url: string): string | null {
+  const m = url.match(/redgifs\.com\/(?:watch|ifr|i)\/([A-Za-z0-9]+)/i)
+  return m ? m[1] : null
+}
+
+export class RedgifsClient {
+  constructor(private readonly fetchImpl: FetchLike) {}
+
   private token: string | null = null
   private tokenFetchedAt = 0
   private tokenPromise: Promise<string> | null = null
   // Refresh a little before the ~24h expiry.
   private static readonly TOKEN_TTL_MS = 23 * 60 * 60 * 1000
 
-  constructor(ctx: SourceContext) {
-    this.fetch = ctx.fetch
-  }
-
   private async getToken(force = false): Promise<string> {
-    const fresh = this.token && Date.now() - this.tokenFetchedAt < RedGifsSource.TOKEN_TTL_MS
+    const fresh = this.token && Date.now() - this.tokenFetchedAt < RedgifsClient.TOKEN_TTL_MS
     if (!force && fresh) return this.token as string
     if (this.tokenPromise) return this.tokenPromise
 
     this.tokenPromise = (async () => {
-      const res = await this.fetch(`${API_BASE}/v2/auth/temporary`, {
+      const res = await this.fetchImpl(`${API_BASE}/v2/auth/temporary`, {
         headers: { 'User-Agent': REDGIFS_UA }
       })
       if (!res.ok) throw new Error(`RedGifs auth failed: ${res.status}`)
@@ -101,22 +112,55 @@ class RedGifsSource implements Source {
     }
   }
 
-  private async apiGet<T>(path: string): Promise<T> {
+  async apiGet<T>(path: string): Promise<T> {
     const doFetch = (token: string) =>
-      this.fetch(`${API_BASE}${path}`, {
+      this.fetchImpl(`${API_BASE}${path}`, {
         headers: { 'User-Agent': REDGIFS_UA, Authorization: `Bearer ${token}` }
       })
 
     let token = await this.getToken()
     let res = await doFetch(token)
     if (res.status === 401) {
-      // Token expired/invalid — refresh once and retry.
       token = await this.getToken(true)
       res = await doFetch(token)
     }
     if (!res.ok) throw new Error(`RedGifs ${path} failed: ${res.status}`)
     return (await res.json()) as T
   }
+
+  async getGif(id: string): Promise<RgGif | null> {
+    try {
+      const r = await this.apiGet<{ gif: RgGif }>(`/v2/gifs/${id}`)
+      return r.gif ?? null
+    } catch {
+      return null
+    }
+  }
+
+  /** Resolve a redgifs id into normalized playable media (used by other sources). */
+  async resolve(id: string): Promise<RgResolved | null> {
+    const gif = await this.getGif(id)
+    if (!gif) return null
+    return {
+      streamUrl: gif.urls.hd || gif.urls.sd,
+      poster: gif.urls.poster,
+      thumbnail: gif.urls.thumbnail || gif.urls.poster,
+      hasAudio: gif.hasAudio,
+      duration: gif.duration,
+      width: gif.width,
+      height: gif.height
+    }
+  }
+}
+
+class RedGifsSource implements Source {
+  readonly id = 'redgifs'
+  readonly label = 'RedGifs'
+  readonly searchable = true
+  readonly orders = ORDERS
+  readonly defaultOrder = 'trending'
+
+  constructor(private readonly client: RedgifsClient) {}
 
   private toItem(gif: RgGif): MediaItem {
     const stream = gif.urls.hd || gif.urls.sd
@@ -150,22 +194,15 @@ class RedGifsSource implements Source {
     return { items, page, pages, total: data.total ?? items.length, hasMore: page < pages }
   }
 
-  /** Home / trending feed (no search text). */
   async browse(params: BrowseParams = {}): Promise<Feed> {
     const order = params.order || this.defaultOrder
     const count = params.count ?? 40
     const page = params.page ?? 1
-    const qs = new URLSearchParams({
-      order,
-      count: String(count),
-      page: String(page),
-      type: 'g'
-    })
-    const data = await this.apiGet<RgSearchResponse>(`/v2/gifs/search?${qs.toString()}`)
+    const qs = new URLSearchParams({ order, count: String(count), page: String(page), type: 'g' })
+    const data = await this.client.apiGet<RgSearchResponse>(`/v2/gifs/search?${qs.toString()}`)
     return this.toFeed(data)
   }
 
-  /** Free-text search. Sends both `search_text` and `tags` for API compatibility. */
   async search(params: BrowseParams): Promise<Feed> {
     const query = (params.query || '').trim()
     if (!query) return this.browse(params)
@@ -180,11 +217,15 @@ class RedGifsSource implements Source {
       page: String(page),
       type: 'g'
     })
-    const data = await this.apiGet<RgSearchResponse>(`/v2/gifs/search?${qs.toString()}`)
+    const data = await this.client.apiGet<RgSearchResponse>(`/v2/gifs/search?${qs.toString()}`)
     return this.toFeed(data)
   }
 }
 
-export function createRedgifs(ctx: SourceContext): Source {
-  return new RedGifsSource(ctx)
+export function createRedgifsClient(ctx: SourceContext): RedgifsClient {
+  return new RedgifsClient(ctx.fetch)
+}
+
+export function createRedgifsSource(client: RedgifsClient): Source {
+  return new RedGifsSource(client)
 }

@@ -3,6 +3,8 @@ import type { MediaItem, SourceInfo } from '@shared/types'
 import { MediaGrid } from './components/MediaGrid'
 import { PlayerModal } from './components/PlayerModal'
 import { UpdateButton } from './components/UpdateButton'
+import { RedditSetup } from './components/RedditSetup'
+import logo from './assets/logo.png'
 
 export function App(): JSX.Element {
   const [sources, setSources] = useState<SourceInfo[]>([])
@@ -13,9 +15,11 @@ export function App(): JSX.Element {
 
   const [items, setItems] = useState<MediaItem[]>([])
   const [page, setPage] = useState(1)
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [setupRequired, setSetupRequired] = useState(false)
 
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [version, setVersion] = useState('')
@@ -36,23 +40,38 @@ export function App(): JSX.Element {
   }, [])
 
   const load = useCallback(
-    async (opts: { sourceId: string; order: string; query: string; page: number; append: boolean }) => {
+    async (opts: {
+      sourceId: string
+      order: string
+      query: string
+      page: number
+      cursor?: string
+      append: boolean
+    }) => {
       const mine = ++reqId.current
       setLoading(true)
       setError(null)
+      setSetupRequired(false)
       try {
-        const params = { query: opts.query, order: opts.order, page: opts.page }
+        const params = { query: opts.query, order: opts.order, page: opts.page, cursor: opts.cursor }
         const feed = opts.query
           ? await window.peachwhip.media.search(opts.sourceId, params)
           : await window.peachwhip.media.browse(opts.sourceId, params)
         if (mine !== reqId.current) return // superseded
         setItems((prev) => (opts.append ? [...prev, ...feed.items] : feed.items))
         setPage(feed.page)
+        setNextCursor(feed.nextCursor)
         setHasMore(feed.hasMore)
       } catch (e) {
         if (mine !== reqId.current) return
-        setError((e as Error).message || 'Something went wrong')
-        if (!opts.append) setItems([])
+        const msg = (e as Error).message || 'Something went wrong'
+        if (msg.includes('REDDIT_SETUP_REQUIRED')) {
+          setSetupRequired(true)
+          setItems([])
+        } else {
+          setError(msg)
+          if (!opts.append) setItems([])
+        }
       } finally {
         if (mine === reqId.current) setLoading(false)
       }
@@ -77,13 +96,23 @@ export function App(): JSX.Element {
 
   const loadMore = (): void => {
     if (!activeId || loading || !hasMore) return
-    void load({ sourceId: activeId, order, query: activeQuery, page: page + 1, append: true })
+    void load({
+      sourceId: activeId,
+      order,
+      query: activeQuery,
+      page: page + 1,
+      cursor: nextCursor,
+      append: true
+    })
   }
 
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">🍑 Peachwhip</div>
+        <div className="brand">
+          <img className="brand-logo" src={logo} alt="" />
+          <span className="brand-name">Peachwhip</span>
+        </div>
 
         <nav className="tabs">
           {sources.map((s) => (
@@ -110,7 +139,11 @@ export function App(): JSX.Element {
         {active?.searchable && (
           <div className="search">
             <input
-              placeholder={`Search ${active.label}…`}
+              placeholder={
+                active.id === 'reddit'
+                  ? 'Subreddit name, or a phrase to search…'
+                  : `Search ${active.label}…`
+              }
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onSearch()}
@@ -130,7 +163,13 @@ export function App(): JSX.Element {
       </header>
 
       <main className="content">
-        {error && items.length === 0 ? (
+        {setupRequired && active?.id === 'reddit' ? (
+          <RedditSetup
+            onSaved={() =>
+              load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
+            }
+          />
+        ) : error && items.length === 0 ? (
           <div className="center error">
             <div>
               <p>⚠️ {error}</p>

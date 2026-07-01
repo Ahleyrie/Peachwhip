@@ -4,13 +4,16 @@
 // automatically appears in the UI's source tabs.
 
 import type { BrowseParams, Feed, Source, SourceContext, SourceInfo } from '../../shared/types'
-import { createRedgifs } from './sources/redgifs'
+import { createRedgifsClient, createRedgifsSource } from './sources/redgifs'
+import { createReddit } from './sources/reddit'
 
 let sources: Source[] = []
 let byId = new Map<string, Source>()
 
 function buildSources(ctx: SourceContext): Source[] {
-  return [createRedgifs(ctx)]
+  // RedGifs client is shared: it also resolves redgifs.com links inside Reddit posts.
+  const redgifs = createRedgifsClient(ctx)
+  return [createRedgifsSource(redgifs), createReddit(ctx, redgifs)]
 }
 
 export function initCore(ctx: SourceContext): void {

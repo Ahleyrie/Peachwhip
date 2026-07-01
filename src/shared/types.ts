@@ -38,6 +38,8 @@ export interface Feed {
   pages: number
   total: number
   hasMore: boolean
+  /** Opaque continuation token for cursor-based sources (e.g. Reddit's `after`). */
+  nextCursor?: string
 }
 
 export interface BrowseParams {
@@ -45,8 +47,11 @@ export interface BrowseParams {
   query?: string
   /** Source-specific ordering key (see Source.orders). */
   order?: string
+  /** Page number for page-based sources (e.g. RedGifs). */
   page?: number
   count?: number
+  /** Continuation token for cursor-based sources (e.g. Reddit). */
+  cursor?: string
 }
 
 export interface SourceOrder {
@@ -91,6 +96,10 @@ export type FetchLike = (
 
 export interface SourceContext {
   fetch: FetchLike
+  /** Read a persisted setting (e.g. a source's API credentials). */
+  getSetting: (key: string) => string | undefined
+  /** Persist a setting (e.g. a generated device id). */
+  setSetting: (key: string, value: string | undefined) => void
 }
 
 // ---- Update / app status surfaced to the renderer ----

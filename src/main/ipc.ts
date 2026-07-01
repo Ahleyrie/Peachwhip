@@ -4,6 +4,7 @@ import { app, ipcMain, type BrowserWindow } from 'electron'
 import type { BrowseParams } from '../shared/types'
 import { browse, listSources, search } from './core/registry'
 import { checkForUpdates, quitAndInstall } from './updater'
+import { getSetting, setSetting } from './settings'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('media:sources', () => listSources())
@@ -14,6 +15,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle('media:search', (_e, sourceId: string, params: BrowseParams) =>
     search(sourceId, params ?? {})
+  )
+
+  ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
+  ipcMain.handle('settings:set', (_e, key: string, value: string | undefined) =>
+    setSetting(key, value)
   )
 
   ipcMain.handle('app:version', () => app.getVersion())

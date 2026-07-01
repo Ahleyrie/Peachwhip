@@ -3,6 +3,7 @@ import { app, BrowserWindow, net, session, shell } from 'electron'
 import { registerIpc } from './ipc'
 import { setupUpdater } from './updater'
 import { initCore } from './core/registry'
+import { getSetting, setSetting } from './settings'
 import type { FetchLike } from '../shared/types'
 import { REDGIFS_UA } from './core/sources/redgifs'
 
@@ -26,6 +27,21 @@ function installRedgifsHeaderInjection(): void {
       headers['Referer'] = 'https://www.redgifs.com/'
       headers['Origin'] = 'https://www.redgifs.com'
       callback({ requestHeaders: headers })
+    }
+  )
+}
+
+// hls.js fetches HLS playlists/segments via XHR, which is subject to CORS. Reddit's
+// video CDN (v.redd.it) doesn't send permissive CORS headers, so we add them here
+// for the streaming hosts. Surgical (specific hosts) rather than disabling
+// webSecurity globally.
+function installStreamCorsHeaders(): void {
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.redd.it/*', '*://*.redgifs.com/*'] },
+    (details, callback) => {
+      const responseHeaders = { ...details.responseHeaders }
+      responseHeaders['Access-Control-Allow-Origin'] = ['*']
+      callback({ responseHeaders })
     }
   )
 }
@@ -68,7 +84,8 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   installRedgifsHeaderInjection()
-  initCore({ fetch: electronFetch })
+  installStreamCorsHeaders()
+  initCore({ fetch: electronFetch, getSetting, setSetting })
   registerIpc(getWindow)
   setupUpdater(getWindow)
   createWindow()

@@ -23,6 +23,8 @@ export function MediaCard({
   const ratio =
     item.width && item.height ? `${item.width} / ${item.height}` : '3 / 4'
   const dur = formatDuration(item.duration)
+  // Hover-preview only for progressive MP4s; HLS (.m3u8) can't play in a bare <video>.
+  const canPreview = !!item.streamUrl && !/\.m3u8($|\?)/i.test(item.streamUrl)
 
   return (
     <div
@@ -38,7 +40,7 @@ export function MediaCard({
         {item.thumbnail && (
           <img src={item.thumbnail} loading="lazy" alt="" draggable={false} />
         )}
-        {hovering && item.streamUrl && (
+        {hovering && canPreview && (
           <video
             ref={videoRef}
             src={item.streamUrl}

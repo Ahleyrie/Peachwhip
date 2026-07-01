@@ -1,12 +1,17 @@
 :root {
-  --bg: #0e0b10;
-  --bg-elev: #171319;
-  --bg-elev-2: #211b26;
-  --border: #2c2431;
-  --text: #f4eef7;
-  --text-dim: #a99fb2;
-  --accent: #ff5c8a;
-  --accent-2: #ff9770;
+  /* Palette pulled from the Peachwhip logo: coral peach, warm orange bandage,
+     leaf green stem, cream fill, bold black linework. */
+  --bg: #17110f;
+  --bg-elev: #211814;
+  --bg-elev-2: #2c201b;
+  --border: #3a2a24;
+  --text: #fbeee9;
+  --text-dim: #b6a29a;
+  --coral: #fa5c6b;
+  --orange: #f6a15c;
+  --green: #aecb4e;
+  --accent: var(--coral);
+  --accent-2: var(--orange);
   --radius: 14px;
   color-scheme: dark;
 }
@@ -40,21 +45,34 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 18px;
+  padding: 10px 18px;
   background: linear-gradient(180deg, var(--bg-elev), var(--bg));
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.brand-name {
   font-weight: 800;
   font-size: 20px;
   letter-spacing: 0.3px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: linear-gradient(90deg, var(--coral), var(--orange));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  white-space: nowrap;
 }
 
 .tabs {
@@ -78,9 +96,10 @@ body {
 }
 
 .tab.active {
-  color: #fff;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #2a1410;
+  background: linear-gradient(90deg, var(--coral), var(--orange));
   border-color: transparent;
+  font-weight: 600;
 }
 
 .spacer {
@@ -120,11 +139,11 @@ body {
 
 .search .go {
   border: none;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  color: #fff;
+  background: linear-gradient(90deg, var(--coral), var(--orange));
+  color: #2a1410;
   border-radius: 999px;
   padding: 6px 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .meta {
@@ -147,8 +166,8 @@ body {
 }
 
 .update-btn.ready {
-  background: linear-gradient(90deg, #43d17a, #2fae8f);
-  color: #06210f;
+  background: linear-gradient(90deg, var(--green), #7fae3c);
+  color: #12240a;
   border: none;
   font-weight: 700;
 }
@@ -192,6 +211,12 @@ body {
   position: relative;
   display: block;
   width: 100%;
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+
+.card:hover {
+  border-color: var(--coral);
+  transform: translateY(-2px);
 }
 
 .card-media {
@@ -267,9 +292,9 @@ body {
   border: none;
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: #2a1410;
   cursor: pointer;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: linear-gradient(90deg, var(--coral), var(--orange));
 }
 
 .loadmore:disabled {
@@ -279,6 +304,98 @@ body {
 
 .error {
   color: #ff8a8a;
+}
+
+/* ---- Reddit setup panel ---- */
+.setup {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+}
+
+.setup-card {
+  max-width: 520px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 26px 28px;
+}
+
+.setup-card h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  background: linear-gradient(90deg, var(--coral), var(--orange));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.setup-sub {
+  margin: 0 0 16px;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.setup-steps {
+  margin: 0 0 18px;
+  padding-left: 20px;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.setup-steps a {
+  color: var(--coral);
+  text-decoration: none;
+}
+
+.setup-steps code {
+  background: var(--bg-elev-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.setup-row {
+  display: flex;
+  gap: 8px;
+}
+
+.setup-input {
+  flex: 1;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.setup-input:focus {
+  border-color: var(--coral);
+}
+
+.setup-save {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  color: #2a1410;
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--coral), var(--orange));
+}
+
+.setup-save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.setup-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 /* ---- Player modal ---- */
@@ -300,7 +417,8 @@ body {
   gap: 10px;
 }
 
-.player video {
+.player video,
+.player img {
   max-height: 78vh;
   max-width: 100%;
   border-radius: 12px;
@@ -316,7 +434,7 @@ body {
 }
 
 .player-info a {
-  color: var(--accent);
+  color: var(--coral);
   text-decoration: none;
 }
 

@@ -15,7 +15,8 @@
     "dist:dir": "electron-vite build && electron-builder --dir"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "hls.js": "^1.6.16"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
