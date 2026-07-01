@@ -91,7 +91,13 @@ export interface FetchResponseLike {
 
 export type FetchLike = (
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string }
+  init?: {
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+    /** 'include' sends the session's cookies (used for the Reddit session). */
+    credentials?: 'include' | 'omit' | 'same-origin'
+  }
 ) => Promise<FetchResponseLike>
 
 export interface SourceContext {

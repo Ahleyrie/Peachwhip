@@ -5,6 +5,7 @@ import type { BrowseParams } from '../shared/types'
 import { browse, listSources, search } from './core/registry'
 import { checkForUpdates, quitAndInstall } from './updater'
 import { getSetting, setSetting } from './settings'
+import { isRedditLoggedIn, openRedditLogin, redditLogout } from './reddit-auth'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('media:sources', () => listSources())
@@ -22,13 +23,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     setSetting(key, value)
   )
 
+  ipcMain.handle('reddit:isLoggedIn', () => isRedditLoggedIn())
+  ipcMain.handle('reddit:login', () => openRedditLogin(getWindow()))
+  ipcMain.handle('reddit:logout', () => redditLogout())
+
   ipcMain.handle('app:version', () => app.getVersion())
 
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:install', () => {
     quitAndInstall()
   })
-
-  // Keep a reference to the window getter available for future push events.
-  void getWindow
 }

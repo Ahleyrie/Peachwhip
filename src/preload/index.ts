@@ -19,6 +19,11 @@ const api = {
     set: (key: string, value: string | undefined): Promise<void> =>
       ipcRenderer.invoke('settings:set', key, value)
   },
+  reddit: {
+    isLoggedIn: (): Promise<boolean> => ipcRenderer.invoke('reddit:isLoggedIn'),
+    login: (): Promise<boolean> => ipcRenderer.invoke('reddit:login'),
+    logout: (): Promise<void> => ipcRenderer.invoke('reddit:logout')
+  },
   update: {
     check: (): Promise<UpdateState> => ipcRenderer.invoke('update:check'),
     install: (): Promise<void> => ipcRenderer.invoke('update:install'),

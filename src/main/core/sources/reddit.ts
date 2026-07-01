@@ -1,11 +1,11 @@
 // Reddit NSFW source — browses curated NSFW subreddits (and any subreddit / search)
-// via Reddit's OAuth API. Inspired by the RedHotSubs client.
+// using Reddit's public .json endpoints with the user's logged-in session cookies.
 //
-// Reddit locked down the public *.json endpoints (they now 403), so we use the
-// sanctioned path: userless "installed client" OAuth against oauth.reddit.com.
-// That needs a free Reddit API client id (created once at reddit.com/prefs/apps),
-// stored in settings as `redditClientId`. Until it's set, calls throw
-// REDDIT_SETUP_REQUIRED and the UI shows a setup panel.
+// Why session-based instead of the API: Reddit disabled self-serve API keys
+// (pre-approval only now) AND returns EMPTY listings for NSFW subs unless the
+// request carries a logged-in session. So the app has the user log in via
+// reddit-auth.ts, and here we fetch .json with credentials:'include' so those
+// session cookies are sent. Requires the account to have adult content enabled.
 //
 // Post media is normalized to the shared MediaItem model:
 //   • Reddit-hosted video (is_video)  -> HLS stream (played via hls.js)
@@ -15,7 +15,6 @@
 //   • link posts with a preview image -> image
 // Text/self posts with no media are skipped. Paging is cursor-based (Reddit `after`).
 
-import { randomBytes } from 'crypto'
 import type {
   BrowseParams,
   Feed,
@@ -27,14 +26,9 @@ import type {
 } from '../../../shared/types'
 import { RedgifsClient, extractRedgifsId } from './redgifs'
 
-const OAUTH_BASE = 'https://oauth.reddit.com'
-const TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'
-const INSTALLED_CLIENT_GRANT = 'https://oauth.reddit.com/grants/installed_client'
-// Reddit expects a unique, descriptive User-Agent (not a generic browser string).
-const APP_UA = 'Peachwhip/0.1.0 (desktop app)'
-
-/** Thrown when no Reddit client id is configured; the UI turns this into a setup panel. */
-export const REDDIT_SETUP_REQUIRED = 'REDDIT_SETUP_REQUIRED'
+const BASE = 'https://www.reddit.com'
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
 // A conservative default feed of popular, legal adult subreddits. Users can type
 // any subreddit into the search box to browse it directly.
@@ -126,75 +120,10 @@ export class RedditSource implements Source {
   readonly orders = ORDERS
   readonly defaultOrder = 'hot'
 
-  private token: string | null = null
-  private tokenExpiresAt = 0
-  private tokenPromise: Promise<string> | null = null
-
   constructor(
     private readonly fetchImpl: FetchLike,
-    private readonly redgifs: RedgifsClient,
-    private readonly getSetting: (key: string) => string | undefined,
-    private readonly setSetting: (key: string, value: string | undefined) => void
+    private readonly redgifs: RedgifsClient
   ) {}
-
-  private deviceId(): string {
-    let id = this.getSetting('redditDeviceId')
-    if (!id) {
-      id = randomBytes(16).toString('hex')
-      this.setSetting('redditDeviceId', id)
-    }
-    return id
-  }
-
-  private async getToken(force = false): Promise<string> {
-    if (!force && this.token && Date.now() < this.tokenExpiresAt) return this.token
-    if (this.tokenPromise) return this.tokenPromise
-
-    const clientId = this.getSetting('redditClientId')
-    if (!clientId) throw new Error(REDDIT_SETUP_REQUIRED)
-
-    this.tokenPromise = (async () => {
-      const auth = Buffer.from(`${clientId}:`).toString('base64')
-      const body = `grant_type=${encodeURIComponent(INSTALLED_CLIENT_GRANT)}&device_id=${this.deviceId()}`
-      const res = await this.fetchImpl(TOKEN_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': APP_UA
-        },
-        body
-      })
-      if (!res.ok) throw new Error(`Reddit auth failed: ${res.status} (check your client id)`)
-      const data = (await res.json()) as { access_token?: string; expires_in?: number }
-      if (!data.access_token) throw new Error('Reddit auth returned no token')
-      this.token = data.access_token
-      this.tokenExpiresAt = Date.now() + ((data.expires_in ?? 3600) - 60) * 1000
-      return this.token
-    })()
-
-    try {
-      return await this.tokenPromise
-    } finally {
-      this.tokenPromise = null
-    }
-  }
-
-  private async api<T>(pathWithQuery: string): Promise<T> {
-    const call = async (token: string) =>
-      this.fetchImpl(`${OAUTH_BASE}${pathWithQuery}`, {
-        headers: { Authorization: `Bearer ${token}`, 'User-Agent': APP_UA }
-      })
-
-    let token = await this.getToken()
-    let res = await call(token)
-    if (res.status === 401) {
-      token = await this.getToken(true)
-      res = await call(token)
-    }
-    if (!res.ok) throw new Error(`Reddit request failed: ${res.status}`)
-    return (await res.json()) as T
-  }
 
   async browse(params: BrowseParams = {}): Promise<Feed> {
     const { sort, t } = parseOrder(params.order || this.defaultOrder)
@@ -216,7 +145,7 @@ export class RedditSource implements Source {
         raw_json: '1'
       })
       if (params.cursor) qs.set('after', params.cursor)
-      return this.fetchListing(`/search?${qs.toString()}`)
+      return this.fetchListing(`/search.json?${qs.toString()}`)
     }
 
     // Single token => treat as a subreddit name.
@@ -228,11 +157,16 @@ export class RedditSource implements Source {
     const qs = new URLSearchParams({ limit: '40', raw_json: '1' })
     if (t) qs.set('t', t)
     if (after) qs.set('after', after)
-    return this.fetchListing(`${path}?${qs.toString()}`)
+    return this.fetchListing(`${path}.json?${qs.toString()}`)
   }
 
   private async fetchListing(pathWithQuery: string): Promise<Feed> {
-    const json = await this.api<RedditListing>(pathWithQuery)
+    const res = await this.fetchImpl(`${BASE}${pathWithQuery}`, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' },
+      credentials: 'include'
+    })
+    if (!res.ok) throw new Error(`Reddit request failed: ${res.status}`)
+    const json = (await res.json()) as RedditListing
     const children = (json.data?.children || []).filter((c) => c.kind === 't3')
     const mapped = await Promise.all(children.map((c) => this.toItem(c.data)))
     const items = mapped.filter((i): i is MediaItem => i !== null)
@@ -342,5 +276,5 @@ export class RedditSource implements Source {
 }
 
 export function createReddit(ctx: SourceContext, redgifs: RedgifsClient): Source {
-  return new RedditSource(ctx.fetch, redgifs, ctx.getSetting, ctx.setSetting)
+  return new RedditSource(ctx.fetch, redgifs)
 }

@@ -3,7 +3,7 @@ import type { MediaItem, SourceInfo } from '@shared/types'
 import { MediaGrid } from './components/MediaGrid'
 import { PlayerModal } from './components/PlayerModal'
 import { UpdateButton } from './components/UpdateButton'
-import { RedditSetup } from './components/RedditSetup'
+import { RedditLogin } from './components/RedditLogin'
 import logo from './assets/logo.png'
 
 export function App(): JSX.Element {
@@ -19,12 +19,15 @@ export function App(): JSX.Element {
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [setupRequired, setSetupRequired] = useState(false)
+
+  // Reddit login gating: null = unknown/checking, true/false = known.
+  const [redditLoggedIn, setRedditLoggedIn] = useState<boolean | null>(null)
 
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [version, setVersion] = useState('')
 
   const active = sources.find((s) => s.id === activeId)
+  const isReddit = active?.id === 'reddit'
   // Guards against stale async responses overwriting a newer request.
   const reqId = useRef(0)
 
@@ -39,6 +42,19 @@ export function App(): JSX.Element {
     })
   }, [])
 
+  // When the Reddit tab is active, check whether a session already exists.
+  useEffect(() => {
+    if (!isReddit) return
+    let cancelled = false
+    setRedditLoggedIn(null)
+    void window.peachwhip.reddit.isLoggedIn().then((ok) => {
+      if (!cancelled) setRedditLoggedIn(ok)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isReddit])
+
   const load = useCallback(
     async (opts: {
       sourceId: string
@@ -51,7 +67,6 @@ export function App(): JSX.Element {
       const mine = ++reqId.current
       setLoading(true)
       setError(null)
-      setSetupRequired(false)
       try {
         const params = { query: opts.query, order: opts.order, page: opts.page, cursor: opts.cursor }
         const feed = opts.query
@@ -64,14 +79,8 @@ export function App(): JSX.Element {
         setHasMore(feed.hasMore)
       } catch (e) {
         if (mine !== reqId.current) return
-        const msg = (e as Error).message || 'Something went wrong'
-        if (msg.includes('REDDIT_SETUP_REQUIRED')) {
-          setSetupRequired(true)
-          setItems([])
-        } else {
-          setError(msg)
-          if (!opts.append) setItems([])
-        }
+        setError((e as Error).message || 'Something went wrong')
+        if (!opts.append) setItems([])
       } finally {
         if (mine === reqId.current) setLoading(false)
       }
@@ -79,11 +88,13 @@ export function App(): JSX.Element {
     []
   )
 
-  // (Re)load the first page whenever source, order, or the active query changes.
+  // (Re)load the first page when source/order/query changes — but for Reddit, wait
+  // until we know the user is logged in.
   useEffect(() => {
     if (!activeId || !order) return
+    if (isReddit && redditLoggedIn !== true) return
     void load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
-  }, [activeId, order, activeQuery, load])
+  }, [activeId, order, activeQuery, isReddit, redditLoggedIn, load])
 
   const onSearch = (): void => setActiveQuery(queryInput.trim())
 
@@ -104,6 +115,12 @@ export function App(): JSX.Element {
       cursor: nextCursor,
       append: true
     })
+  }
+
+  const logoutReddit = async (): Promise<void> => {
+    await window.peachwhip.reddit.logout()
+    setItems([])
+    setRedditLoggedIn(false)
   }
 
   return (
@@ -140,9 +157,7 @@ export function App(): JSX.Element {
           <div className="search">
             <input
               placeholder={
-                active.id === 'reddit'
-                  ? 'Subreddit name, or a phrase to search…'
-                  : `Search ${active.label}…`
+                isReddit ? 'Subreddit name, or a phrase to search…' : `Search ${active.label}…`
               }
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
@@ -157,18 +172,21 @@ export function App(): JSX.Element {
         <div className="spacer" />
 
         <div className="meta">
+          {isReddit && redditLoggedIn && (
+            <button className="update-btn" onClick={logoutReddit}>
+              Reddit: log out
+            </button>
+          )}
           <UpdateButton />
           <span>v{version}</span>
         </div>
       </header>
 
       <main className="content">
-        {setupRequired && active?.id === 'reddit' ? (
-          <RedditSetup
-            onSaved={() =>
-              load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
-            }
-          />
+        {isReddit && redditLoggedIn === false ? (
+          <RedditLogin onLoggedIn={() => setRedditLoggedIn(true)} />
+        ) : isReddit && redditLoggedIn === null ? (
+          <div className="center">Checking Reddit login…</div>
         ) : error && items.length === 0 ? (
           <div className="center error">
             <div>
