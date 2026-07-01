@@ -1,0 +1,32 @@
+appId: com.peachwhip.app
+productName: Peachwhip
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - resources/**
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-setup.${ext}
+mac:
+  target:
+    - dmg
+  category: public.app-category.entertainment
+linux:
+  target:
+    - AppImage
+  category: AudioVideo
+# Self-update feed. Point this at your Cloudflare R2 (or any static host) once set up.
+# electron-builder will upload build artifacts here on `publish`, and the app reads
+# the same URL to check for / download updates. Placeholder for now.
+publish:
+  provider: generic
+  url: https://REPLACE-ME.r2.dev/peachwhip/
