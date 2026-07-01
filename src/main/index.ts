@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { app, BrowserWindow, net, session, shell } from 'electron'
+import { app, BrowserWindow, net, session } from 'electron'
 import { registerIpc } from './ipc'
 import { setupUpdater } from './updater'
 import { initCore } from './core/registry'
@@ -46,6 +46,36 @@ function installStreamCorsHeaders(): void {
   )
 }
 
+// Tube embed players set X-Frame-Options / CSP frame-ancestors to prevent framing.
+// Strip those on the embed hosts so the in-app <iframe> player can load them.
+const TUBE_HOSTS = ['*://*.pornhub.com/*', '*://*.xvideos.com/*', '*://*.redtube.com/*', '*://*.youporn.com/*']
+function installEmbedFramingHeaders(): void {
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: TUBE_HOSTS },
+    (details, callback) => {
+      const responseHeaders: Record<string, string[]> = {}
+      for (const [k, v] of Object.entries(details.responseHeaders || {})) {
+        const lower = k.toLowerCase()
+        if (lower === 'x-frame-options' || lower === 'content-security-policy') continue
+        responseHeaders[k] = v as string[]
+      }
+      callback({ responseHeaders })
+    }
+  )
+}
+
+// Best-effort age-consent cookies so tube search pages return content.
+async function installTubeConsentCookies(): Promise<void> {
+  const set = (url: string, name: string, value: string): Promise<void> =>
+    session.defaultSession.cookies.set({ url, name, value }).catch(() => undefined)
+  await Promise.all([
+    set('https://www.pornhub.com', 'age_verified', '1'),
+    set('https://www.pornhub.com', 'accessAgeDisclaimerPH', '1'),
+    set('https://www.pornhub.com', 'platform', 'pc'),
+    set('https://www.youporn.com', 'age_verified', '1')
+  ])
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -63,11 +93,13 @@ function createWindow(): void {
     }
   })
 
-  // Open external links (e.g. "view on source") in the system browser.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
-    return { action: 'deny' }
-  })
+  // Block all popups (tube embeds spawn ad windows). Legit "open on source" links
+  // go through the app:openExternal IPC instead.
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+  // The app is a SPA whose top frame never navigates; prevent ad scripts inside
+  // embed iframes from hijacking the whole window.
+  mainWindow.webContents.on('will-navigate', (e) => e.preventDefault())
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
   mainWindow.on('closed', () => {
@@ -85,6 +117,8 @@ function createWindow(): void {
 app.whenReady().then(() => {
   installRedgifsHeaderInjection()
   installStreamCorsHeaders()
+  installEmbedFramingHeaders()
+  void installTubeConsentCookies()
   initCore({ fetch: electronFetch, getSetting, setSetting })
   registerIpc(getWindow)
   setupUpdater(getWindow)

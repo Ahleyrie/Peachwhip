@@ -10,18 +10,21 @@ function formatDuration(sec?: number): string | null {
 
 export function MediaCard({
   item,
-  onOpen
+  onOpen,
+  isFav,
+  onToggleFav
 }: {
   item: MediaItem
   onOpen: (item: MediaItem) => void
+  isFav: boolean
+  onToggleFav: (item: MediaItem) => void
 }): JSX.Element {
   const [hovering, setHovering] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   // Reserve space using the item's aspect ratio so the masonry doesn't jump
   // while thumbnails load.
-  const ratio =
-    item.width && item.height ? `${item.width} / ${item.height}` : '3 / 4'
+  const ratio = item.width && item.height ? `${item.width} / ${item.height}` : '3 / 4'
   const dur = formatDuration(item.duration)
   // Hover-preview only for progressive MP4s; HLS (.m3u8) can't play in a bare <video>.
   const canPreview = !!item.streamUrl && !/\.m3u8($|\?)/i.test(item.streamUrl)
@@ -37,9 +40,7 @@ export function MediaCard({
       }}
     >
       <div className="card-media" style={{ aspectRatio: ratio }}>
-        {item.thumbnail && (
-          <img src={item.thumbnail} loading="lazy" alt="" draggable={false} />
-        )}
+        {item.thumbnail && <img src={item.thumbnail} loading="lazy" alt="" draggable={false} />}
         {hovering && canPreview && (
           <video
             ref={videoRef}
@@ -52,6 +53,16 @@ export function MediaCard({
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
           />
         )}
+        <button
+          className={`fav ${isFav ? 'on' : ''}`}
+          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFav(item)
+          }}
+        >
+          {isFav ? '♥' : '♡'}
+        </button>
         {dur && <span className="badge dur">{dur}</span>}
         {item.hasAudio && <span className="badge audio">🔊</span>}
       </div>

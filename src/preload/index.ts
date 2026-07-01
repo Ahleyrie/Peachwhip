@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { BrowseParams, Feed, SourceInfo, UpdateState } from '../shared/types'
+import type { BrowseParams, Feed, MediaItem, SourceInfo, UpdateState } from '../shared/types'
 
 // The single, typed surface the renderer is allowed to touch. Everything else
 // (Node, Electron internals) stays out of the web context.
@@ -12,7 +12,8 @@ const api = {
       ipcRenderer.invoke('media:search', source, params)
   },
   app: {
-    version: (): Promise<string> => ipcRenderer.invoke('app:version')
+    version: (): Promise<string> => ipcRenderer.invoke('app:version'),
+    openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url)
   },
   settings: {
     get: (key: string): Promise<string | undefined> => ipcRenderer.invoke('settings:get', key),
@@ -23,6 +24,13 @@ const api = {
     isLoggedIn: (): Promise<boolean> => ipcRenderer.invoke('reddit:isLoggedIn'),
     login: (): Promise<boolean> => ipcRenderer.invoke('reddit:login'),
     logout: (): Promise<void> => ipcRenderer.invoke('reddit:logout')
+  },
+  favorites: {
+    list: (): Promise<MediaItem[]> => ipcRenderer.invoke('favorites:list'),
+    keys: (): Promise<string[]> => ipcRenderer.invoke('favorites:keys'),
+    add: (item: MediaItem): Promise<void> => ipcRenderer.invoke('favorites:add', item),
+    remove: (source: string, id: string): Promise<void> =>
+      ipcRenderer.invoke('favorites:remove', source, id)
   },
   update: {
     check: (): Promise<UpdateState> => ipcRenderer.invoke('update:check'),

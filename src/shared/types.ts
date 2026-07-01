@@ -18,6 +18,8 @@ export interface MediaItem {
   poster?: string
   /** Direct video URL for `video` items. */
   streamUrl?: string
+  /** Embed-player page URL (used when there's no direct stream, e.g. tube sites). */
+  embedUrl?: string
   /** Direct image URL for `image` items. */
   imageUrl?: string
   width?: number

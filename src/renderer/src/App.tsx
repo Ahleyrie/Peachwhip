@@ -6,6 +6,8 @@ import { UpdateButton } from './components/UpdateButton'
 import { RedditLogin } from './components/RedditLogin'
 import logo from './assets/logo.png'
 
+const FAV_TAB = '__favorites__'
+
 export function App(): JSX.Element {
   const [sources, setSources] = useState<SourceInfo[]>([])
   const [activeId, setActiveId] = useState<string>('')
@@ -20,19 +22,22 @@ export function App(): JSX.Element {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reddit login gating: null = unknown/checking, true/false = known.
   const [redditLoggedIn, setRedditLoggedIn] = useState<boolean | null>(null)
+  const [favKeys, setFavKeys] = useState<Set<string>>(new Set())
 
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [version, setVersion] = useState('')
 
   const active = sources.find((s) => s.id === activeId)
   const isReddit = active?.id === 'reddit'
-  // Guards against stale async responses overwriting a newer request.
+  const isFavView = activeId === FAV_TAB
   const reqId = useRef(0)
+  const contentRef = useRef<HTMLElement | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     void window.peachwhip.app.version().then(setVersion)
+    void window.peachwhip.favorites.keys().then((keys) => setFavKeys(new Set(keys)))
     void window.peachwhip.media.sources().then((list) => {
       setSources(list)
       if (list.length) {
@@ -42,7 +47,6 @@ export function App(): JSX.Element {
     })
   }, [])
 
-  // When the Reddit tab is active, check whether a session already exists.
   useEffect(() => {
     if (!isReddit) return
     let cancelled = false
@@ -72,7 +76,7 @@ export function App(): JSX.Element {
         const feed = opts.query
           ? await window.peachwhip.media.search(opts.sourceId, params)
           : await window.peachwhip.media.browse(opts.sourceId, params)
-        if (mine !== reqId.current) return // superseded
+        if (mine !== reqId.current) return
         setItems((prev) => (opts.append ? [...prev, ...feed.items] : feed.items))
         setPage(feed.page)
         setNextCursor(feed.nextCursor)
@@ -88,25 +92,28 @@ export function App(): JSX.Element {
     []
   )
 
-  // (Re)load the first page when source/order/query changes — but for Reddit, wait
-  // until we know the user is logged in.
+  // Favorites view: load from local store, no network.
   useEffect(() => {
-    if (!activeId || !order) return
+    if (!isFavView) return
+    reqId.current++
+    setError(null)
+    setHasMore(false)
+    setLoading(true)
+    void window.peachwhip.favorites.list().then((list) => {
+      setItems(list)
+      setLoading(false)
+    })
+  }, [isFavView])
+
+  // Network sources: (re)load first page on source/order/query change (Reddit waits for login).
+  useEffect(() => {
+    if (isFavView || !activeId || !order) return
     if (isReddit && redditLoggedIn !== true) return
     void load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
-  }, [activeId, order, activeQuery, isReddit, redditLoggedIn, load])
+  }, [activeId, order, activeQuery, isReddit, redditLoggedIn, isFavView, load])
 
-  const onSearch = (): void => setActiveQuery(queryInput.trim())
-
-  const onSelectSource = (s: SourceInfo): void => {
-    setActiveId(s.id)
-    setOrder(s.defaultOrder)
-    setQueryInput('')
-    setActiveQuery('')
-  }
-
-  const loadMore = (): void => {
-    if (!activeId || loading || !hasMore) return
+  const loadMore = useCallback((): void => {
+    if (isFavView || !activeId || loading || !hasMore) return
     void load({
       sourceId: activeId,
       order,
@@ -115,6 +122,46 @@ export function App(): JSX.Element {
       cursor: nextCursor,
       append: true
     })
+  }, [isFavView, activeId, loading, hasMore, order, activeQuery, page, nextCursor, load])
+
+  // Infinite scroll: observe a sentinel near the bottom of the content area.
+  const loadMoreRef = useRef(loadMore)
+  loadMoreRef.current = loadMore
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasMore) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreRef.current()
+      },
+      { root: contentRef.current, rootMargin: '800px' }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasMore, items.length])
+
+  const onSearch = (): void => setActiveQuery(queryInput.trim())
+
+  const onSelectSource = (id: string, defaultOrder?: string): void => {
+    setActiveId(id)
+    if (defaultOrder) setOrder(defaultOrder)
+    setQueryInput('')
+    setActiveQuery('')
+    setItems([])
+  }
+
+  const toggleFav = async (item: MediaItem): Promise<void> => {
+    const k = `${item.source}:${item.id}`
+    const next = new Set(favKeys)
+    if (next.has(k)) {
+      await window.peachwhip.favorites.remove(item.source, item.id)
+      next.delete(k)
+      if (isFavView) setItems((prev) => prev.filter((i) => `${i.source}:${i.id}` !== k))
+    } else {
+      await window.peachwhip.favorites.add(item)
+      next.add(k)
+    }
+    setFavKeys(next)
   }
 
   const logoutReddit = async (): Promise<void> => {
@@ -122,6 +169,9 @@ export function App(): JSX.Element {
     setItems([])
     setRedditLoggedIn(false)
   }
+
+  const retry = (): void =>
+    void load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
 
   return (
     <div className="app">
@@ -136,11 +186,17 @@ export function App(): JSX.Element {
             <button
               key={s.id}
               className={`tab ${s.id === activeId ? 'active' : ''}`}
-              onClick={() => onSelectSource(s)}
+              onClick={() => onSelectSource(s.id, s.defaultOrder)}
             >
               {s.label}
             </button>
           ))}
+          <button
+            className={`tab ${isFavView ? 'active' : ''}`}
+            onClick={() => onSelectSource(FAV_TAB)}
+          >
+            ♥ Favorites
+          </button>
         </nav>
 
         {active && (
@@ -182,7 +238,7 @@ export function App(): JSX.Element {
         </div>
       </header>
 
-      <main className="content">
+      <main className="content" ref={contentRef}>
         {isReddit && redditLoggedIn === false ? (
           <RedditLogin onLoggedIn={() => setRedditLoggedIn(true)} />
         ) : isReddit && redditLoggedIn === null ? (
@@ -191,12 +247,7 @@ export function App(): JSX.Element {
           <div className="center error">
             <div>
               <p>⚠️ {error}</p>
-              <button
-                className="loadmore"
-                onClick={() =>
-                  load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
-                }
-              >
+              <button className="loadmore" onClick={retry}>
                 Retry
               </button>
             </div>
@@ -204,20 +255,26 @@ export function App(): JSX.Element {
         ) : items.length === 0 && loading ? (
           <div className="center">Loading…</div>
         ) : items.length === 0 ? (
-          <div className="center">No results.</div>
+          <div className="center">
+            {isFavView ? 'No favorites yet — tap ♡ on anything to save it.' : 'No results.'}
+          </div>
         ) : (
           <>
-            <MediaGrid items={items} onOpen={setSelected} />
-            {hasMore && (
-              <button className="loadmore" onClick={loadMore} disabled={loading}>
-                {loading ? 'Loading…' : 'Load more'}
-              </button>
-            )}
+            <MediaGrid items={items} onOpen={setSelected} favKeys={favKeys} onToggleFav={toggleFav} />
+            {hasMore && <div ref={sentinelRef} className="sentinel" />}
+            {hasMore && loading && <div className="loading-more">Loading more…</div>}
           </>
         )}
       </main>
 
-      {selected && <PlayerModal item={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <PlayerModal
+          item={selected}
+          onClose={() => setSelected(null)}
+          isFav={favKeys.has(`${selected.source}:${selected.id}`)}
+          onToggleFav={toggleFav}
+        />
+      )}
     </div>
   )
 }

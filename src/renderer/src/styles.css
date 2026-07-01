@@ -252,6 +252,38 @@ body {
   left: 8px;
 }
 
+/* Favorite heart on cards */
+.fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.1s ease;
+  backdrop-filter: blur(2px);
+}
+
+.card:hover .fav {
+  opacity: 1;
+}
+
+.fav.on {
+  opacity: 1;
+  color: var(--coral);
+}
+
+.fav:hover {
+  transform: scale(1.12);
+}
+
 .card-info {
   padding: 8px 10px 10px;
 }
@@ -300,6 +332,17 @@ body {
 .loadmore:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.sentinel {
+  height: 1px;
+}
+
+.loading-more {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 8px 0 32px;
+  font-size: 14px;
 }
 
 .error {
@@ -425,12 +468,33 @@ body {
   background: #000;
 }
 
+.player .embed {
+  width: min(1000px, 90vw);
+  height: 78vh;
+  border: none;
+  border-radius: 12px;
+  background: #000;
+}
+
 .player-info {
   display: flex;
   align-items: center;
   gap: 12px;
   color: var(--text-dim);
   font-size: 13px;
+}
+
+.fav-inline {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.fav-inline.on {
+  color: var(--coral);
 }
 
 .player-info a {

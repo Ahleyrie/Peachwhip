@@ -31,10 +31,14 @@ function useVideoSource(item: MediaItem): React.RefObject<HTMLVideoElement> {
 
 export function PlayerModal({
   item,
-  onClose
+  onClose,
+  isFav,
+  onToggleFav
 }: {
   item: MediaItem
   onClose: () => void
+  isFav: boolean
+  onToggleFav: (item: MediaItem) => void
 }): JSX.Element {
   const videoRef = useVideoSource(item)
 
@@ -46,24 +50,48 @@ export function PlayerModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const hasStream = item.kind === 'video' && item.streamUrl
+  const hasEmbed = item.kind === 'video' && !item.streamUrl && item.embedUrl
+
   return (
     <div className="overlay" onClick={onClose}>
       <button className="close" onClick={onClose} aria-label="Close">
         ✕
       </button>
       <div className="player" onClick={(e) => e.stopPropagation()}>
-        {item.kind === 'video' && item.streamUrl ? (
+        {hasStream ? (
           <video ref={videoRef} poster={item.poster} controls autoPlay loop playsInline />
+        ) : hasEmbed ? (
+          <iframe
+            className="embed"
+            src={item.embedUrl}
+            allow="autoplay; fullscreen; encrypted-media"
+            allowFullScreen
+            referrerPolicy="no-referrer"
+          />
         ) : (
           (item.imageUrl || item.thumbnail) && (
             <img src={item.imageUrl || item.thumbnail} alt={item.title} />
           )
         )}
         <div className="player-info">
+          <button
+            className={`fav-inline ${isFav ? 'on' : ''}`}
+            onClick={() => onToggleFav(item)}
+            title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {isFav ? '♥' : '♡'}
+          </button>
           <span>{item.title}</span>
           {item.author && <span>· @{item.author}</span>}
           {item.sourceUrl && (
-            <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+            <a
+              href={item.sourceUrl}
+              onClick={(e) => {
+                e.preventDefault()
+                void window.peachwhip.app.openExternal(item.sourceUrl as string)
+              }}
+            >
               open on {item.source} ↗
             </a>
           )}
