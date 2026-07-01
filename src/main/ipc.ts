@@ -3,6 +3,13 @@
 import { app, ipcMain, shell, type BrowserWindow } from 'electron'
 import type { BrowseParams } from '../shared/types'
 import { browse, listSources, search } from './core/registry'
+import {
+  comicBrowse,
+  comicDetail,
+  comicImages,
+  comicSearch,
+  listComicSources
+} from './core/comics/registry'
 import { checkForUpdates, quitAndInstall } from './updater'
 import { getSetting, setSetting } from './settings'
 import { isRedditLoggedIn, openRedditLogin, redditLogout } from './reddit-auth'
@@ -34,6 +41,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('favorites:add', (_e, item: MediaItem) => addFavorite(item))
   ipcMain.handle('favorites:remove', (_e, source: string, id: string) =>
     removeFavorite(source, id)
+  )
+
+  ipcMain.handle('comics:sources', () => listComicSources())
+  ipcMain.handle('comics:browse', (_e, sourceId: string, params) => comicBrowse(sourceId, params ?? {}))
+  ipcMain.handle('comics:search', (_e, sourceId: string, params) => comicSearch(sourceId, params ?? {}))
+  ipcMain.handle('comics:detail', (_e, sourceId: string, id: string) => comicDetail(sourceId, id))
+  ipcMain.handle('comics:images', (_e, sourceId: string, id: string, chapterId: string) =>
+    comicImages(sourceId, id, chapterId)
   )
 
   ipcMain.handle('app:version', () => app.getVersion())

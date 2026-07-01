@@ -4,9 +4,11 @@ import { MediaGrid } from './components/MediaGrid'
 import { PlayerModal } from './components/PlayerModal'
 import { UpdateButton } from './components/UpdateButton'
 import { RedditLogin } from './components/RedditLogin'
+import { ComicsView } from './components/ComicsView'
 import logo from './assets/logo.png'
 
 const FAV_TAB = '__favorites__'
+const COMICS_TAB = '__comics__'
 
 export function App(): JSX.Element {
   const [sources, setSources] = useState<SourceInfo[]>([])
@@ -31,6 +33,7 @@ export function App(): JSX.Element {
   const active = sources.find((s) => s.id === activeId)
   const isReddit = active?.id === 'reddit'
   const isFavView = activeId === FAV_TAB
+  const isComics = activeId === COMICS_TAB
   const reqId = useRef(0)
   const contentRef = useRef<HTMLElement | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -107,10 +110,10 @@ export function App(): JSX.Element {
 
   // Network sources: (re)load first page on source/order/query change (Reddit waits for login).
   useEffect(() => {
-    if (isFavView || !activeId || !order) return
+    if (isFavView || isComics || !activeId || !order) return
     if (isReddit && redditLoggedIn !== true) return
     void load({ sourceId: activeId, order, query: activeQuery, page: 1, append: false })
-  }, [activeId, order, activeQuery, isReddit, redditLoggedIn, isFavView, load])
+  }, [activeId, order, activeQuery, isReddit, redditLoggedIn, isFavView, isComics, load])
 
   const loadMore = useCallback((): void => {
     if (isFavView || !activeId || loading || !hasMore) return
@@ -192,6 +195,12 @@ export function App(): JSX.Element {
             </button>
           ))}
           <button
+            className={`tab ${isComics ? 'active' : ''}`}
+            onClick={() => onSelectSource(COMICS_TAB)}
+          >
+            📖 Comics
+          </button>
+          <button
             className={`tab ${isFavView ? 'active' : ''}`}
             onClick={() => onSelectSource(FAV_TAB)}
           >
@@ -238,8 +247,11 @@ export function App(): JSX.Element {
         </div>
       </header>
 
-      <main className="content" ref={contentRef}>
-        {isReddit && redditLoggedIn === false ? (
+      {isComics ? (
+        <ComicsView />
+      ) : (
+        <main className="content" ref={contentRef}>
+          {isReddit && redditLoggedIn === false ? (
           <RedditLogin onLoggedIn={() => setRedditLoggedIn(true)} />
         ) : isReddit && redditLoggedIn === null ? (
           <div className="center">Checking Reddit login…</div>
@@ -265,7 +277,8 @@ export function App(): JSX.Element {
             {hasMore && loading && <div className="loading-more">Loading more…</div>}
           </>
         )}
-      </main>
+        </main>
+      )}
 
       {selected && (
         <PlayerModal

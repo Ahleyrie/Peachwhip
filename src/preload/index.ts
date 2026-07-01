@@ -1,5 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { BrowseParams, Feed, MediaItem, SourceInfo, UpdateState } from '../shared/types'
+import type {
+  BrowseParams,
+  ComicDetail,
+  ComicFeed,
+  ComicSourceInfo,
+  Feed,
+  MediaItem,
+  SourceInfo,
+  UpdateState
+} from '../shared/types'
 
 // The single, typed surface the renderer is allowed to touch. Everything else
 // (Node, Electron internals) stays out of the web context.
@@ -10,6 +19,19 @@ const api = {
       ipcRenderer.invoke('media:browse', source, params),
     search: (source: string, params: BrowseParams): Promise<Feed> =>
       ipcRenderer.invoke('media:search', source, params)
+  },
+  comics: {
+    sources: (): Promise<ComicSourceInfo[]> => ipcRenderer.invoke('comics:sources'),
+    browse: (source: string, params: { order?: string; page?: number }): Promise<ComicFeed> =>
+      ipcRenderer.invoke('comics:browse', source, params),
+    search: (
+      source: string,
+      params: { query?: string; order?: string; page?: number }
+    ): Promise<ComicFeed> => ipcRenderer.invoke('comics:search', source, params),
+    detail: (source: string, id: string): Promise<ComicDetail> =>
+      ipcRenderer.invoke('comics:detail', source, id),
+    images: (source: string, id: string, chapterId: string): Promise<string[]> =>
+      ipcRenderer.invoke('comics:images', source, id, chapterId)
   },
   app: {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),

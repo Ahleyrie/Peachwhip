@@ -110,6 +110,54 @@ export interface SourceContext {
   setSetting: (key: string, value: string | undefined) => void
 }
 
+// ---- Comics / manga ----
+//
+// A separate model from MediaItem: comics are multi-page (and sometimes
+// multi-chapter) works browsed as covers, opened to a detail, then read page by
+// page. A doujinshi (e.g. nhentai) is one chapter of N pages.
+
+export interface ComicSummary {
+  id: string
+  source: string
+  title: string
+  cover: string
+  pageCount?: number
+  tags?: string[]
+  language?: string
+}
+
+export interface ComicChapter {
+  id: string
+  title: string
+  pageCount?: number
+}
+
+export interface ComicDetail extends ComicSummary {
+  chapters: ComicChapter[]
+  description?: string
+}
+
+export interface ComicFeed {
+  items: ComicSummary[]
+  page: number
+  hasMore: boolean
+}
+
+export interface ComicSourceInfo {
+  id: string
+  label: string
+  orders: SourceOrder[]
+  defaultOrder: string
+}
+
+export interface ComicSource extends ComicSourceInfo {
+  browse(params: { order?: string; page?: number }): Promise<ComicFeed>
+  search(params: { query?: string; order?: string; page?: number }): Promise<ComicFeed>
+  detail(id: string): Promise<ComicDetail>
+  /** Ordered image URLs for a chapter (already de-scrambled if applicable). */
+  images(id: string, chapterId: string): Promise<string[]>
+}
+
 // ---- Update / app status surfaced to the renderer ----
 
 export type UpdateState =

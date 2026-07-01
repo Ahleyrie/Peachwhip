@@ -3,6 +3,7 @@ import { app, BrowserWindow, net, session } from 'electron'
 import { registerIpc } from './ipc'
 import { setupUpdater } from './updater'
 import { initCore } from './core/registry'
+import { initComics } from './core/comics/registry'
 import { getSetting, setSetting } from './settings'
 import type { FetchLike } from '../shared/types'
 import { REDGIFS_UA } from './core/sources/redgifs'
@@ -26,6 +27,18 @@ function installRedgifsHeaderInjection(): void {
       headers['User-Agent'] = REDGIFS_UA
       headers['Referer'] = 'https://www.redgifs.com/'
       headers['Origin'] = 'https://www.redgifs.com'
+      callback({ requestHeaders: headers })
+    }
+  )
+}
+
+// nhentai image CDNs (i./t.nhentai.net) hotlink-protect; send a matching Referer.
+function installNhentaiHeaderInjection(): void {
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.nhentai.net/*'] },
+    (details, callback) => {
+      const headers = details.requestHeaders
+      headers['Referer'] = 'https://nhentai.net/'
       callback({ requestHeaders: headers })
     }
   )
@@ -116,10 +129,12 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   installRedgifsHeaderInjection()
+  installNhentaiHeaderInjection()
   installStreamCorsHeaders()
   installEmbedFramingHeaders()
   void installTubeConsentCookies()
   initCore({ fetch: electronFetch, getSetting, setSetting })
+  initComics({ fetch: electronFetch, getSetting, setSetting })
   registerIpc(getWindow)
   setupUpdater(getWindow)
   createWindow()
