@@ -54,7 +54,9 @@ const api = {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url),
     clearCache: (): Promise<void> => ipcRenderer.invoke('app:clearCache'),
-    clearData: (): Promise<void> => ipcRenderer.invoke('app:clearData')
+    clearData: (): Promise<void> => ipcRenderer.invoke('app:clearData'),
+    setProxy: (rules: string): Promise<void> => ipcRenderer.invoke('app:setProxy', rules),
+    getProxy: (): Promise<string> => ipcRenderer.invoke('app:getProxy')
   },
   settings: {
     get: (key: string): Promise<string | undefined> => ipcRenderer.invoke('settings:get', key),

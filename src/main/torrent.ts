@@ -21,13 +21,28 @@ export async function streamTorrent(magnet: string): Promise<string> {
   const client = await getClient()
 
   const torrent: any = await new Promise((resolve, reject) => {
-    const existing = client.get(magnet)
-    if (existing) return resolve(existing)
-    const t = client.add(magnet, (added: any) => resolve(added))
-    t.on('error', reject)
-    setTimeout(() => reject(new Error('timed out finding peers')), 60000)
+    let t: any
+    try {
+      t = client.add(magnet)
+    } catch {
+      // Already added — reuse the existing torrent.
+      t = client.torrents.find(
+        (x: any) => x.magnetURI === magnet || magnet.toLowerCase().includes(String(x.infoHash))
+      )
+    }
+    if (!t) return reject(new Error('could not start torrent'))
+    if (t.ready) return resolve(t)
+    t.on('ready', () => resolve(t))
+    t.on('error', (err: Error) => reject(err))
+    setTimeout(
+      () => reject(new Error('timed out finding peers (no seeds, or your network blocks torrents)')),
+      60000
+    )
   })
 
+  if (!torrent || !torrent.files || torrent.files.length === 0) {
+    throw new Error('no files in torrent (no peers reached)')
+  }
   const files: any[] = [...torrent.files].sort((a, b) => b.length - a.length)
   const file = files.find((f) => VIDEO_RE.test(f.name)) || files[0]
   if (!file) throw new Error('no playable file in torrent')

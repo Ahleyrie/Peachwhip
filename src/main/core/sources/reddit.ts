@@ -135,22 +135,26 @@ export class RedditSource implements Source {
     if (!q) return this.browse(params)
     const { sort, t } = parseOrder(params.order || this.defaultOrder)
 
-    if (/\s/.test(q)) {
-      // Multi-word => global NSFW search.
-      const qs = new URLSearchParams({
-        q,
-        include_over_18: 'on',
-        sort: 'relevance',
-        limit: '40',
-        raw_json: '1'
-      })
-      if (params.cursor) qs.set('after', params.cursor)
-      return this.fetchListing(`/search.json?${qs.toString()}`)
+    // A single token (or an explicit r/name) is treated as a subreddit to browse.
+    // If that subreddit 404s (doesn't exist), fall back to a global NSFW search.
+    if (!/\s/.test(q)) {
+      const sub = q.replace(/^\/?(r\/)?/i, '')
+      try {
+        return await this.listing(`/r/${sub}/${sort}`, t, params.cursor)
+      } catch (e) {
+        if (!String((e as Error)?.message || '').includes('404')) throw e
+      }
     }
 
-    // Single token => treat as a subreddit name.
-    const sub = q.replace(/^\/?(r\/)?/i, '')
-    return this.listing(`/r/${sub}/${sort}`, t, params.cursor)
+    const qs = new URLSearchParams({
+      q,
+      include_over_18: 'on',
+      sort: 'relevance',
+      limit: '40',
+      raw_json: '1'
+    })
+    if (params.cursor) qs.set('after', params.cursor)
+    return this.fetchListing(`/search.json?${qs.toString()}`)
   }
 
   private listing(path: string, t?: string, after?: string): Promise<Feed> {

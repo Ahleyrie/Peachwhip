@@ -82,6 +82,12 @@ export function SettingsModal({
   const [disabled, setDisabled] = usePref<string[]>('disabledSources', [])
   const [importMsg, setImportMsg] = useState('')
   const [pin, setPin] = useState('')
+  const [proxy, setProxy] = useState('')
+  const [proxyMsg, setProxyMsg] = useState('')
+
+  useEffect(() => {
+    void window.peachwhip.app.getProxy().then(setProxy)
+  }, [])
   const [stats, setStats] = useState<{ pies: number; history: number; watch: number; downloads: number; topTags: string[] }>(
     { pies: 0, history: 0, watch: 0, downloads: 0, topTags: [] }
   )
@@ -241,6 +247,34 @@ export function SettingsModal({
               </span>
             </div>
             <p className="set-note">Panic hotkey: Ctrl+Shift+H instantly hides/shows the window.</p>
+          </section>
+
+          <section>
+            <h3>Network / Proxy</h3>
+            <p className="set-note">
+              If your network blocks adult sites (SSL errors), route through a proxy/VPN
+              endpoint. Examples: <code>socks5://127.0.0.1:1080</code> or{' '}
+              <code>http://host:port</code>. Leave blank for a direct connection.
+            </p>
+            <div className="set-row">
+              <input
+                type="text"
+                value={proxy}
+                placeholder="socks5://127.0.0.1:1080"
+                onChange={(e) => setProxy(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="update-btn"
+                onClick={async () => {
+                  await window.peachwhip.app.setProxy(proxy.trim())
+                  setProxyMsg('Applied ✓ — reload a tab to test.')
+                }}
+              >
+                Apply
+              </button>
+            </div>
+            {proxyMsg && <p className="set-note">{proxyMsg}</p>}
           </section>
 
           <section>

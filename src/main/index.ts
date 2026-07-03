@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { pathToFileURL } from 'url'
-import { app, BrowserWindow, globalShortcut, net, protocol, session } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, net, protocol, session } from 'electron'
 import { registerIpc } from './ipc'
 import { setupUpdater } from './updater'
 import { initCore } from './core/registry'
@@ -9,10 +9,24 @@ import { getSetting, setSetting } from './settings'
 import type { FetchLike } from '../shared/types'
 import { REDGIFS_UA } from './core/sources/redgifs'
 
-// Chromium-backed fetch shared by all content sources. Uses a real browser TLS
-// fingerprint + the app session's cookies, which is what makes Cloudflare-fronted
-// adult sources (RedGifs and beyond) reachable where Node's fetch may not be.
-const electronFetch: FetchLike = (url, init) => net.fetch(url, init as RequestInit)
+// Some networks break HTTP/3 (QUIC) to adult CDNs, causing ERR_QUIC_PROTOCOL_ERROR.
+// Force plain TLS/TCP, which is more reliable behind filters/proxies.
+app.commandLine.appendSwitch('disable-quic')
+
+// Chromium-backed fetch shared by all content sources. Retries once on transient
+// network/TLS errors (QUIC/SSL/connection resets are often flaky, not fatal).
+const NET_ERR = /ERR_(QUIC|SSL|CONNECTION|NETWORK_CHANGED|TIMED_OUT|ADDRESS_UNREACHABLE)/i
+const electronFetch: FetchLike = async (url, init) => {
+  try {
+    return await net.fetch(url, init as RequestInit)
+  } catch (e) {
+    if (NET_ERR.test(String((e as Error)?.message || ''))) {
+      await new Promise((r) => setTimeout(r, 500))
+      return net.fetch(url, init as RequestInit)
+    }
+    throw e
+  }
+}
 
 // Custom protocol so downloaded local files can play in the renderer regardless of
 // its origin (file:// in prod, http://localhost in dev). URL form: pwfile://f/<encoded absolute path>
@@ -99,6 +113,17 @@ function installEmbedFramingHeaders(): void {
   )
 }
 
+// Optional proxy — lets users behind a filter route traffic through a proxy/VPN
+// endpoint (e.g. socks5://127.0.0.1:1080 or http://host:port).
+export async function applyProxy(): Promise<void> {
+  const rules = getSetting('proxyRules')
+  try {
+    await session.defaultSession.setProxy(rules ? { proxyRules: rules } : { mode: 'direct' })
+  } catch {
+    /* ignore */
+  }
+}
+
 // Best-effort age-consent cookies so tube search pages return content.
 async function installTubeConsentCookies(): Promise<void> {
   const set = (url: string, name: string, value: string): Promise<void> =>
@@ -182,9 +207,15 @@ app.whenReady().then(() => {
   installStreamCorsHeaders()
   installEmbedFramingHeaders()
   void installTubeConsentCookies()
+  void applyProxy()
   initCore({ fetch: electronFetch, getSetting, setSetting })
   initComics({ fetch: electronFetch, getSetting, setSetting })
   registerIpc(getWindow)
+  ipcMain.handle('app:setProxy', async (_e, rules: string) => {
+    setSetting('proxyRules', rules || undefined)
+    await applyProxy()
+  })
+  ipcMain.handle('app:getProxy', () => getSetting('proxyRules') || '')
   setupUpdater(getWindow)
   createWindow()
 
