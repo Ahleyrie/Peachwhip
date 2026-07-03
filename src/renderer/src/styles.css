@@ -917,3 +917,48 @@ body {
   cursor: pointer;
   line-height: 1;
 }
+
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 44px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  cursor: pointer;
+  width: 54px;
+  height: 84px;
+  border-radius: 12px;
+  z-index: 55;
+}
+.nav-arrow.left {
+  left: 14px;
+}
+.nav-arrow.right {
+  right: 14px;
+}
+.nav-arrow:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.pcontrols {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pcontrols select,
+.pcontrols button {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pcontrols button.on {
+  border-color: var(--coral);
+  color: var(--coral);
+}

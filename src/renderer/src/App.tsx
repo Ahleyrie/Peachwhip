@@ -312,14 +312,21 @@ export function App(): JSX.Element {
         </main>
       )}
 
-      {selected && (
-        <PlayerModal
-          item={selected}
-          onClose={() => setSelected(null)}
-          isFav={favKeys.has(`${selected.source}:${selected.id}`)}
-          onToggleFav={toggleFav}
-        />
-      )}
+      {selected &&
+        (() => {
+          const selKey = `${selected.source}:${selected.id}`
+          const idx = items.findIndex((i) => `${i.source}:${i.id}` === selKey)
+          return (
+            <PlayerModal
+              item={selected}
+              onClose={() => setSelected(null)}
+              isFav={favKeys.has(selKey)}
+              onToggleFav={toggleFav}
+              onNext={idx >= 0 && idx < items.length - 1 ? () => setSelected(items[idx + 1]) : undefined}
+              onPrev={idx > 0 ? () => setSelected(items[idx - 1]) : undefined}
+            />
+          )
+        })()}
 
       {showSettings && (
         <SettingsModal

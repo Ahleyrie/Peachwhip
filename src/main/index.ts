@@ -114,7 +114,9 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      // Keep audio/video playing when the window is minimized/backgrounded.
+      backgroundThrottling: false
     }
   })
 

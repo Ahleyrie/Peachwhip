@@ -166,6 +166,7 @@ export function SettingsModal({
           <section>
             <h3>Behavior</h3>
             <Toggle k="autoplayOnOpen" def={true} label="Autoplay when opening a video" />
+            <Toggle k="autoAdvance" def={false} label="Auto-play next when a video ends" />
             <Toggle k="muteByDefault" def={false} label="Mute videos by default" />
             <Toggle k="rememberVolume" def={true} label="Remember volume" />
             <Toggle k="hoverPreview" def={true} label="Hover-preview videos in the grid" />
