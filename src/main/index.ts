@@ -1,5 +1,6 @@
 import { join } from 'path'
-import { app, BrowserWindow, globalShortcut, net, session } from 'electron'
+import { pathToFileURL } from 'url'
+import { app, BrowserWindow, globalShortcut, net, protocol, session } from 'electron'
 import { registerIpc } from './ipc'
 import { setupUpdater } from './updater'
 import { initCore } from './core/registry'
@@ -12,6 +13,15 @@ import { REDGIFS_UA } from './core/sources/redgifs'
 // fingerprint + the app session's cookies, which is what makes Cloudflare-fronted
 // adult sources (RedGifs and beyond) reachable where Node's fetch may not be.
 const electronFetch: FetchLike = (url, init) => net.fetch(url, init as RequestInit)
+
+// Custom protocol so downloaded local files can play in the renderer regardless of
+// its origin (file:// in prod, http://localhost in dev). URL form: pwfile://f/<encoded absolute path>
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'pwfile',
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, bypassCSP: true }
+  }
+])
 
 let mainWindow: BrowserWindow | null = null
 const getWindow = (): BrowserWindow | null => mainWindow
@@ -142,6 +152,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  protocol.handle('pwfile', (request) => {
+    const p = decodeURIComponent(new URL(request.url).pathname).replace(/^\//, '')
+    return net.fetch(pathToFileURL(p).toString())
+  })
+
   installRedgifsHeaderInjection()
   installNhentaiHeaderInjection()
   installStreamCorsHeaders()

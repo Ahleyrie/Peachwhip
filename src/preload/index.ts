@@ -4,6 +4,7 @@ import type {
   ComicDetail,
   ComicFeed,
   ComicSourceInfo,
+  DownloadRecord,
   Feed,
   MediaItem,
   SourceInfo,
@@ -36,6 +37,18 @@ const api = {
   torrent: {
     stream: (magnet: string): Promise<string> => ipcRenderer.invoke('torrent:stream', magnet),
     stop: (): Promise<void> => ipcRenderer.invoke('torrent:stop')
+  },
+  downloads: {
+    start: (item: MediaItem): Promise<DownloadRecord> => ipcRenderer.invoke('downloads:start', item),
+    list: (): Promise<DownloadRecord[]> => ipcRenderer.invoke('downloads:list'),
+    delete: (id: string, source: string): Promise<void> =>
+      ipcRenderer.invoke('downloads:delete', id, source),
+    openFolder: (): Promise<void> => ipcRenderer.invoke('downloads:openFolder'),
+    onDone: (cb: (p: { id: string; title: string }) => void): (() => void) => {
+      const l = (_e: unknown, p: { id: string; title: string }): void => cb(p)
+      ipcRenderer.on('download:done', l)
+      return () => ipcRenderer.removeListener('download:done', l)
+    }
   },
   app: {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),

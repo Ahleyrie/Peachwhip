@@ -21,6 +21,7 @@ import {
   removeFavorite
 } from './favorites'
 import { streamTorrent, stopTorrent } from './torrent'
+import { deleteDownload, downloadItem, downloadsDir, listDownloads } from './downloads'
 import type { MediaItem } from '../shared/types'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
@@ -60,6 +61,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle('torrent:stream', (_e, magnet: string) => streamTorrent(magnet))
   ipcMain.handle('torrent:stop', () => stopTorrent())
+
+  ipcMain.handle('downloads:start', (_e, item: MediaItem) => downloadItem(item))
+  ipcMain.handle('downloads:list', () => listDownloads())
+  ipcMain.handle('downloads:delete', (_e, id: string, source: string) => deleteDownload(id, source))
+  ipcMain.handle('downloads:openFolder', () => shell.openPath(downloadsDir()))
 
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('app:openExternal', (_e, url: string) => {

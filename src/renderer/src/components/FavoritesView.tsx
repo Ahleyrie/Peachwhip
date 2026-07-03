@@ -1,9 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { MediaItem } from '@shared/types'
+import type { DownloadRecord, MediaItem } from '@shared/types'
 import { MediaGrid } from './MediaGrid'
 import { clearList, getList } from '../lists'
 
-type Tab = 'pies' | 'history' | 'watchlater'
+type Tab = 'pies' | 'history' | 'watchlater' | 'downloads'
+
+function downloadToItem(r: DownloadRecord): MediaItem {
+  const url = `pwfile://f/${encodeURIComponent(r.file)}`
+  return {
+    id: r.id,
+    source: r.source,
+    kind: r.kind === 'image' ? 'image' : 'video',
+    title: r.title,
+    thumbnail: r.thumbnail || url,
+    streamUrl: r.kind === 'image' ? undefined : url,
+    imageUrl: r.kind === 'image' ? url : undefined
+  }
+}
 
 /** The "Pies" area: favorites, history, and watch-later, with a filter. */
 export function FavoritesView({
@@ -21,6 +34,8 @@ export function FavoritesView({
 
   const reload = useCallback(() => {
     if (tab === 'pies') void window.peachwhip.favorites.list().then(setItems)
+    else if (tab === 'downloads')
+      void window.peachwhip.downloads.list().then((recs) => setItems(recs.map(downloadToItem)))
     else setItems(getList(tab))
   }, [tab])
 
@@ -57,11 +72,22 @@ export function FavoritesView({
           >
             ⌚ Watch later
           </button>
+          <button
+            className={`tab ${tab === 'downloads' ? 'active' : ''}`}
+            onClick={() => setTab('downloads')}
+          >
+            ⬇ Downloads
+          </button>
         </div>
         <div className="search">
           <input placeholder="Filter…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        {tab !== 'pies' && (
+        {tab === 'downloads' && (
+          <button className="update-btn" onClick={() => window.peachwhip.downloads.openFolder()}>
+            Open folder
+          </button>
+        )}
+        {(tab === 'history' || tab === 'watchlater') && (
           <button
             className="update-btn"
             onClick={() => {
@@ -80,7 +106,9 @@ export function FavoritesView({
               ? 'No pies yet — tap ♡ on anything to save it. 🍑'
               : tab === 'history'
                 ? 'Nothing watched yet.'
-                : 'Nothing queued.'}
+                : tab === 'downloads'
+                  ? 'No downloads yet — right-click an item → Download.'
+                  : 'Nothing queued.'}
           </div>
         ) : (
           <MediaGrid

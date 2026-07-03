@@ -129,6 +129,17 @@ export function MediaCard({
           >
             Watch later
           </button>
+          {((item.streamUrl && !/\.m3u8($|\?)/i.test(item.streamUrl)) || item.imageUrl) && (
+            <button
+              onClick={() => {
+                void window.peachwhip.downloads.start(item).catch((e) => toast('Download failed'))
+                toast('Download started…')
+                setMenu(null)
+              }}
+            >
+              Download
+            </button>
+          )}
           <button
             onClick={() => {
               void navigator.clipboard.writeText(item.sourceUrl || item.streamUrl || '')

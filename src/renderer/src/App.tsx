@@ -138,6 +138,11 @@ export function App(): JSX.Element {
     if (items.length) openItem(items[Math.floor(Math.random() * items.length)])
   }
 
+  // Toast when a download finishes.
+  useEffect(() => {
+    return window.peachwhip.downloads.onDone((p) => toast(`Downloaded: ${p.title}`))
+  }, [])
+
   // Blur the app when it loses focus (privacy).
   useEffect(() => {
     const onBlur = (): void => {

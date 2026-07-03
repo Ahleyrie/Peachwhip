@@ -112,6 +112,16 @@ export interface SourceContext {
   setSetting: (key: string, value: string | undefined) => void
 }
 
+export interface DownloadRecord {
+  id: string
+  source: string
+  title: string
+  file: string
+  thumbnail?: string
+  kind: string
+  date: number
+}
+
 // ---- Comics / manga ----
 //
 // A separate model from MediaItem: comics are multi-page (and sometimes
