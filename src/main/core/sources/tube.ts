@@ -26,6 +26,7 @@ interface RawResult {
   url: string
   duration?: string
   thumb?: string
+  embed?: string
 }
 
 interface TubeSite {
@@ -163,6 +164,34 @@ const SITES: Record<string, TubeSite> = {
       const m = url.match(/(?:watch|embed)\/(\d+)/)
       return m ? `https://www.youporn.com/embed/${m[1]}/` : undefined
     }
+  },
+
+  eporner: {
+    value: 'eporner',
+    label: 'Eporner',
+    firstPage: 1,
+    json: true,
+    buildUrl: (q, p) =>
+      `https://www.eporner.com/api/v2/video/search/?query=${encodeURIComponent(q)}&per_page=40&page=${p}&thumbsize=medium&order=top-weekly&format=json&lq=1`,
+    parse: (body) => {
+      try {
+        const data = JSON.parse(body) as {
+          videos?: { title: string; url: string; length_sec?: number; embed?: string; default_thumb?: { src?: string } }[]
+        }
+        return (data.videos || []).map((v) => ({
+          title: v.title,
+          url: v.url,
+          duration: v.length_sec
+            ? `${Math.floor(v.length_sec / 60)}:${String(v.length_sec % 60).padStart(2, '0')}`
+            : undefined,
+          thumb: v.default_thumb?.src,
+          embed: v.embed
+        }))
+      } catch {
+        return []
+      }
+    },
+    embed: () => undefined
   }
 }
 
@@ -207,7 +236,7 @@ class TubeSource implements Source {
     const raw = site.parse(body)
 
     const items: MediaItem[] = raw.map((r) => {
-      const embedUrl = site.embed(r.url)
+      const embedUrl = r.embed || site.embed(r.url)
       const embedId = embedUrl?.match(/(\d+|[a-z0-9]+)\/?$/i)?.[1]
       return {
         id: `${site.value}-${embedId || encodeURIComponent(r.url)}`,

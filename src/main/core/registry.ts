@@ -8,6 +8,7 @@ import { createRedgifsClient, createRedgifsSource } from './sources/redgifs'
 import { createReddit } from './sources/reddit'
 import { createTube } from './sources/tube'
 import { createTorrents } from './sources/torrents'
+import { createBooru } from './sources/booru'
 
 let sources: Source[] = []
 let byId = new Map<string, Source>()
@@ -18,6 +19,7 @@ function buildSources(ctx: SourceContext): Source[] {
   return [
     createRedgifsSource(redgifs),
     createReddit(ctx, redgifs),
+    createBooru(ctx),
     createTube(ctx),
     createTorrents(ctx)
   ]
