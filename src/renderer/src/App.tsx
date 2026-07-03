@@ -8,7 +8,9 @@ import { ComicsView } from './components/ComicsView'
 import { IndexView } from './components/IndexView'
 import { ThemeApplier } from './components/ThemeApplier'
 import { SettingsModal } from './components/SettingsModal'
+import { FavoritesView } from './components/FavoritesView'
 import { getPref, setPref, usePref } from './prefs'
+import { addToList, getSeen, markSeen } from './lists'
 import logo from './assets/logo.png'
 
 const FAV_TAB = '__favorites__'
@@ -100,7 +102,12 @@ export function App(): JSX.Element {
           ? await window.peachwhip.media.search(opts.sourceId, params)
           : await window.peachwhip.media.browse(opts.sourceId, params)
         if (mine !== reqId.current) return
-        setItems((prev) => (opts.append ? [...prev, ...feed.items] : feed.items))
+        let incoming = feed.items
+        if (getPref('hideSeen', false)) {
+          const seen = getSeen()
+          incoming = incoming.filter((i) => !seen.has(`${i.source}:${i.id}`))
+        }
+        setItems((prev) => (opts.append ? [...prev, ...incoming] : incoming))
         setPage(feed.page)
         setNextCursor(feed.nextCursor)
         setHasMore(feed.hasMore)
@@ -115,18 +122,11 @@ export function App(): JSX.Element {
     []
   )
 
-  // Favorites view: load from local store, no network.
-  useEffect(() => {
-    if (!isFavView) return
-    reqId.current++
-    setError(null)
-    setHasMore(false)
-    setLoading(true)
-    void window.peachwhip.favorites.list().then((list) => {
-      setItems(list)
-      setLoading(false)
-    })
-  }, [isFavView])
+  const openItem = (item: MediaItem): void => {
+    setSelected(item)
+    addToList('history', item)
+    markSeen(`${item.source}:${item.id}`)
+  }
 
   // Network sources: (re)load first page on source/order/query change (Reddit waits for login).
   useEffect(() => {
@@ -231,7 +231,7 @@ export function App(): JSX.Element {
             className={`tab ${isFavView ? 'active' : ''}`}
             onClick={() => onSelectSource(FAV_TAB)}
           >
-            ♥ Favorites
+            ♥ Pies
           </button>
         </nav>
 
@@ -281,6 +281,8 @@ export function App(): JSX.Element {
         <ComicsView />
       ) : isIndex ? (
         <IndexView />
+      ) : isFavView ? (
+        <FavoritesView onOpen={openItem} favKeys={favKeys} onToggleFav={toggleFav} />
       ) : (
         <main className="content" ref={contentRef}>
           {isReddit && redditLoggedIn === false ? (
@@ -304,7 +306,7 @@ export function App(): JSX.Element {
           </div>
         ) : (
           <>
-            <MediaGrid items={items} onOpen={setSelected} favKeys={favKeys} onToggleFav={toggleFav} />
+            <MediaGrid items={items} onOpen={openItem} favKeys={favKeys} onToggleFav={toggleFav} />
             {hasMore && <div ref={sentinelRef} className="sentinel" />}
             {hasMore && loading && <div className="loading-more">Loading more…</div>}
           </>

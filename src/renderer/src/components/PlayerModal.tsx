@@ -3,6 +3,7 @@ import Hls from 'hls.js'
 import type { MediaItem } from '@shared/types'
 import { getPref, setPref } from '../prefs'
 import { openExternal } from '../util'
+import { addToList, inList, removeFromList } from '../lists'
 
 function attachVideo(video: HTMLVideoElement | null, url: string | undefined): (() => void) | void {
   if (!video || !url) return
@@ -44,6 +45,7 @@ export function PlayerModal({
   const [loop, setLoop] = useState(() => getPref('loopVideo', false))
   const [rotate, setRotate] = useState(0)
   const [mirror, setMirror] = useState(false)
+  const [watchLater, setWatchLater] = useState(() => inList('watchlater', item))
 
   const hasStream = item.kind === 'video' && !!item.streamUrl
   const hasEmbed = item.kind === 'video' && !item.streamUrl && !!item.embedUrl
@@ -305,6 +307,17 @@ export function PlayerModal({
             title={isFav ? 'Remove from favorites' : 'Add to favorites'}
           >
             {isFav ? '♥' : '♡'}
+          </button>
+          <button
+            className={`fav-inline ${watchLater ? 'on' : ''}`}
+            title="Watch later"
+            onClick={() => {
+              if (watchLater) removeFromList('watchlater', item)
+              else addToList('watchlater', item)
+              setWatchLater(!watchLater)
+            }}
+          >
+            ⌚
           </button>
           <span>{item.title}</span>
           {item.author && <span>· @{item.author}</span>}
