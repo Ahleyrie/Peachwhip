@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Peachwhip — your desktop adult content hub</title>
+    <meta name="description" content="Peachwhip is a desktop app that unifies adult content — RedGifs, Reddit, tube sites, hentai manga, and a curated NSFW index — with native streaming and in-app updates." />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="logo.png" />
+    <link rel="stylesheet" href="style.css" />
+    <meta property="og:title" content="Peachwhip" />
+    <meta property="og:description" content="A desktop hub for adult content — native streaming, one app, self-updating." />
+    <meta property="og:image" content="logo.png" />
+  </head>
+  <body>
+    <!-- Age gate -->
+    <div id="gate" class="gate">
+      <div class="gate-card">
+        <img src="logo.png" alt="Peachwhip" width="72" height="72" />
+        <h1>Peachwhip</h1>
+        <p>This site is for adults only. You must be 18 or older (21 where required) to enter.</p>
+        <div class="gate-actions">
+          <button id="enter" class="btn primary">I'm 18 or older — Enter</button>
+          <a class="btn ghost" href="https://www.google.com">Leave</a>
+        </div>
+      </div>
+    </div>
+
+    <main id="site" class="site" hidden>
+      <header class="hero">
+        <img class="hero-logo" src="logo.png" alt="" width="96" height="96" />
+        <h1 class="hero-title">Peachwhip</h1>
+        <p class="hero-tag">One desktop app for everything adult — native streaming, self-updating, yours.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://github.com/Ahleyrie/Peachwhip/releases">Download for Windows</a>
+          <a class="btn ghost" href="https://github.com/Ahleyrie/Peachwhip">Source on GitHub</a>
+        </div>
+        <p class="hero-note">Direct download • installs in seconds • updates itself from inside the app.</p>
+      </header>
+
+      <section class="features">
+        <div class="feature"><span>🎬</span><h3>Native streaming</h3><p>RedGifs, Reddit video (HLS), and tube-site embeds play right in the app.</p></div>
+        <div class="feature"><span>🔥</span><h3>RedGifs</h3><p>Browse trending, search, and hover-preview — no login needed.</p></div>
+        <div class="feature"><span>👽</span><h3>Reddit client</h3><p>Log in once and browse NSFW subreddits, hot/top/new, in a clean grid.</p></div>
+        <div class="feature"><span>📺</span><h3>Tube search</h3><p>Search Pornhub, xVideos, RedTube and YouPorn from one place.</p></div>
+        <div class="feature"><span>📖</span><h3>Manga & doujin</h3><p>A built-in reader with continuous, webtoon-style scrolling.</p></div>
+        <div class="feature"><span>🧭</span><h3>NSFW index</h3><p>A curated, searchable directory of the best adult resources.</p></div>
+        <div class="feature"><span>♥</span><h3>Favorites</h3><p>Save anything across every source and find it in one tab.</p></div>
+        <div class="feature"><span>🔄</span><h3>Self-updating</h3><p>New versions install themselves — no app store, no hassle.</p></div>
+      </section>
+
+      <section class="cta">
+        <h2>Get Peachwhip</h2>
+        <p>Windows desktop. Free. No account required.</p>
+        <a class="btn primary big" href="https://github.com/Ahleyrie/Peachwhip/releases">Download the latest release</a>
+        <p class="cta-fine">Unsigned build — Windows SmartScreen may warn on first run; choose “More info → Run anyway.”</p>
+      </section>
+
+      <footer class="foot">
+        <img src="logo.png" alt="" width="28" height="28" />
+        <span>Peachwhip · 18+ only · aggregates third-party content — respect each site's terms and your local laws.</span>
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        var gate = document.getElementById('gate')
+        var site = document.getElementById('site')
+        function enter() {
+          try { localStorage.setItem('pw_age_ok', '1') } catch (e) {}
+          gate.hidden = true
+          site.hidden = false
+        }
+        if (localStorage.getItem('pw_age_ok') === '1') enter()
+        document.getElementById('enter').addEventListener('click', enter)
+      })()
+    </script>
+  </body>
+</html>
