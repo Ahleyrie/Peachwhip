@@ -33,19 +33,24 @@ enable/disable, remember last tab, clear cache, export/import/reset settings.
 **Privacy** — ✅ PIN lock, panic hotkey (Ctrl+Shift+H), blur-on-blur, incognito,
 erase-all-data. Discovery — ✅ surprise/random, back-to-top.
 
+**Downloads** — ✅ stream video/image to disk with progress, offline library
+(Downloads sub-tab), local playback via pwfile://, open-folder, download toast.
+
+**Search & UX** — ✅ Ctrl+K command palette, recent-search suggestions, client-side
+sort (views/longest/A–Z), onboarding, loading skeletons, stats panel, remember window
+size/position. Reddit multireddit works today (type `sub1+sub2` in the search box).
+
 ## Still on the list (next passes)
-- **Downloads & offline** (105–120) — whole subsystem: queue, offline library, CBZ/PDF.
 - **More sources** — Hitomi, E-Hentai, Pixiv, Hanime, Coomer/Kemono, SpankBang,
   Motherless, iwara, Twitter/Bluesky, Multporn; plugin/source-pack system.
-- **Collections** — named collections, tags/notes/ratings on items, smart collections.
-- **Reddit extras** — multireddit builder, save/upvote, comments viewer, subs sidebar.
-- **Discovery** — For-You feed, trending dashboard, continue row, recommendations,
-  duration/sort filters, arrow-key grid nav.
-- **Search** — history, autocomplete, saved searches, tag include/exclude, command palette.
-- **Perf/reliability** — disk thumb cache, retry-with-backoff, mirror failover,
-  offline detection, health screen.
-- **UI** — onboarding, skeletons, per-tab colors, reorderable tabs, remember window
-  size, seasonal themes; localization; stats dashboard.
+- **Collections** — named collections, drag-reorder, tags/notes/ratings, smart collections.
+- **Reddit extras** — save/upvote/comments (need OAuth write scope), subs sidebar.
+- **Discovery** — For-You mixed feed, trending dashboard, recommendations, duration filter,
+  arrow-key grid nav.
+- **Downloads refinements** — queue UI, pause/resume, CBZ/PDF export, throttle, auto-delete.
+- **Perf/reliability** — disk thumb cache, retry-with-backoff, mirror failover, health screen.
+- **UI** — per-tab colors, reorderable tabs, seasonal themes; localization.
 - **Privacy** — proxy/Tor/DoH, tray/hide-from-taskbar, decoy password, tracker blocking.
 
-These are larger or need live-source verification; they're queued for the next pass.
+Remaining items are mostly fragile scrapers (need live verification), external services,
+or large niche systems (plugins, localization). Queued for the next pass.
