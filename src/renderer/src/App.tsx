@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MediaItem, SourceInfo } from '@shared/types'
 import { MediaGrid } from './components/MediaGrid'
 import { PlayerModal } from './components/PlayerModal'
@@ -11,6 +11,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { FavoritesView } from './components/FavoritesView'
 import { LockGate } from './components/LockGate'
 import { Toasts } from './components/Toasts'
+import { CmdPalette } from './components/CmdPalette'
 import { toast } from './toast'
 import { getPref, setPref, usePref } from './prefs'
 import { addToList, getSeen, markSeen } from './lists'
@@ -41,6 +42,9 @@ export function App(): JSX.Element {
   const [version, setVersion] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [showTop, setShowTop] = useState(false)
+  const [showPalette, setShowPalette] = useState(false)
+  const [sortBy, setSortBy] = useState('default')
+  const [recents, setRecents] = usePref<string[]>('recentSearches', [])
   const [disabledSources] = usePref<string[]>('disabledSources', [])
   const visibleSources = sources.filter((s) => !disabledSources.includes(s.id))
 
@@ -143,6 +147,18 @@ export function App(): JSX.Element {
     return window.peachwhip.downloads.onDone((p) => toast(`Downloaded: ${p.title}`))
   }, [])
 
+  // Command palette hotkey.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowPalette((p) => !p)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // Blur the app when it loses focus (privacy).
   useEffect(() => {
     const onBlur = (): void => {
@@ -192,7 +208,20 @@ export function App(): JSX.Element {
     return () => io.disconnect()
   }, [hasMore, items.length])
 
-  const onSearch = (): void => setActiveQuery(queryInput.trim())
+  const onSearch = (): void => {
+    const q = queryInput.trim()
+    setActiveQuery(q)
+    if (q) setRecents([q, ...recents.filter((r) => r !== q)].slice(0, 12))
+  }
+
+  const displayed = useMemo(() => {
+    if (sortBy === 'default') return items
+    const arr = [...items]
+    if (sortBy === 'views') arr.sort((a, b) => (b.views || 0) - (a.views || 0))
+    else if (sortBy === 'duration') arr.sort((a, b) => (b.duration || 0) - (a.duration || 0))
+    else if (sortBy === 'title') arr.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+    return arr
+  }, [items, sortBy])
 
   const onSelectSource = (id: string, defaultOrder?: string): void => {
     setActiveId(id)
@@ -277,9 +306,19 @@ export function App(): JSX.Element {
           </select>
         )}
 
+        {active && (
+          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="default">Sort: default</option>
+            <option value="views">Most viewed</option>
+            <option value="duration">Longest</option>
+            <option value="title">A–Z</option>
+          </select>
+        )}
+
         {active?.searchable && (
           <div className="search">
             <input
+              list="pw-recents"
               placeholder={
                 isReddit ? 'Subreddit name, or a phrase to search…' : `Search ${active.label}…`
               }
@@ -287,6 +326,11 @@ export function App(): JSX.Element {
               onChange={(e) => setQueryInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onSearch()}
             />
+            <datalist id="pw-recents">
+              {recents.map((r) => (
+                <option key={r} value={r} />
+              ))}
+            </datalist>
             <button className="go" onClick={onSearch}>
               Search
             </button>
@@ -345,7 +389,7 @@ export function App(): JSX.Element {
           </div>
         ) : (
           <>
-            <MediaGrid items={items} onOpen={openItem} favKeys={favKeys} onToggleFav={toggleFav} />
+            <MediaGrid items={displayed} onOpen={openItem} favKeys={favKeys} onToggleFav={toggleFav} />
             {hasMore && <div ref={sentinelRef} className="sentinel" />}
             {hasMore && loading && <div className="loading-more">Loading more…</div>}
           </>
@@ -356,15 +400,17 @@ export function App(): JSX.Element {
       {selected &&
         (() => {
           const selKey = `${selected.source}:${selected.id}`
-          const idx = items.findIndex((i) => `${i.source}:${i.id}` === selKey)
+          const idx = displayed.findIndex((i) => `${i.source}:${i.id}` === selKey)
           return (
             <PlayerModal
               item={selected}
               onClose={() => setSelected(null)}
               isFav={favKeys.has(selKey)}
               onToggleFav={toggleFav}
-              onNext={idx >= 0 && idx < items.length - 1 ? () => setSelected(items[idx + 1]) : undefined}
-              onPrev={idx > 0 ? () => setSelected(items[idx - 1]) : undefined}
+              onNext={
+                idx >= 0 && idx < displayed.length - 1 ? () => setSelected(displayed[idx + 1]) : undefined
+              }
+              onPrev={idx > 0 ? () => setSelected(displayed[idx - 1]) : undefined}
             />
           )
         })()}
@@ -385,6 +431,26 @@ export function App(): JSX.Element {
         >
           ↑
         </button>
+      )}
+
+      {showPalette && (
+        <CmdPalette
+          tabs={[
+            ...visibleSources.map((s) => ({ id: s.id, label: s.label })),
+            { id: COMICS_TAB, label: 'Comics' },
+            { id: INDEX_TAB, label: 'Index' },
+            { id: FAV_TAB, label: 'Pies' }
+          ]}
+          onGo={(id) => {
+            const s = sources.find((x) => x.id === id)
+            onSelectSource(id, s?.defaultOrder)
+          }}
+          onSearchActive={(query) => {
+            setQueryInput(query)
+            setActiveQuery(query)
+          }}
+          onClose={() => setShowPalette(false)}
+        />
       )}
 
       <Toasts />
