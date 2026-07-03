@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { NSFW_INDEX } from '../data/nsfwIndex'
+import { openExternal } from '../util'
 
 /** Browsable, searchable directory of NSFW resources. Links open externally. */
 export function IndexView(): JSX.Element {
@@ -19,9 +20,7 @@ export function IndexView(): JSX.Element {
     })).filter((s) => s.entries.length > 0)
   }, [q])
 
-  const open = (url: string): void => {
-    void window.peachwhip.app.openExternal(url)
-  }
+  const open = (url: string): void => openExternal(url)
 
   return (
     <div className="indexv">

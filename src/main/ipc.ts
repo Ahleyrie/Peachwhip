@@ -1,6 +1,6 @@
 // Registers all IPC handlers the renderer can call via the preload bridge.
 
-import { app, ipcMain, shell, type BrowserWindow } from 'electron'
+import { app, ipcMain, session, shell, type BrowserWindow } from 'electron'
 import type { BrowseParams } from '../shared/types'
 import { browse, listSources, search } from './core/registry'
 import {
@@ -59,6 +59,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('app:openExternal', (_e, url: string) => {
     if (/^(https?|magnet):/i.test(url)) void shell.openExternal(url)
   })
+  ipcMain.handle('app:clearCache', () => session.defaultSession.clearCache())
 
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:install', () => {

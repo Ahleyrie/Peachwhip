@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import type { MediaItem } from '@shared/types'
+import { getPref, setPref } from '../prefs'
+import { openExternal } from '../util'
 
 /** Attach a stream to a <video>, using hls.js for .m3u8 where the browser can't. */
 function attachVideo(video: HTMLVideoElement | null, url: string | undefined): (() => void) | void {
@@ -39,9 +41,27 @@ export function PlayerModal({
   const isTorrent = !!item.magnet && !hasStream && !hasEmbed
 
   const playUrl = hasStream ? item.streamUrl : torrentUrl || undefined
+  const autoplay = getPref('autoplayOnOpen', true)
 
   useEffect(() => {
-    return attachVideo(videoRef.current, playUrl)
+    const cleanup = attachVideo(videoRef.current, playUrl)
+    const v = videoRef.current
+    if (v) {
+      v.muted = getPref('muteByDefault', false)
+      if (getPref('rememberVolume', true)) v.volume = getPref('volume', 1)
+    }
+    return cleanup
+  }, [playUrl])
+
+  // Persist volume changes.
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    const onVol = (): void => {
+      if (getPref('rememberVolume', true)) setPref('volume', v.volume)
+    }
+    v.addEventListener('volumechange', onVol)
+    return () => v.removeEventListener('volumechange', onVol)
   }, [playUrl])
 
   useEffect(() => {
@@ -60,7 +80,7 @@ export function PlayerModal({
   }, [torrentUrl])
 
   const openMagnet = (): void => {
-    if (item.magnet) void window.peachwhip.app.openExternal(item.magnet)
+    if (item.magnet) openExternal(item.magnet)
   }
 
   const streamTorrent = async (): Promise<void> => {
@@ -85,7 +105,7 @@ export function PlayerModal({
       </button>
       <div className="player" onClick={(e) => e.stopPropagation()}>
         {playUrl ? (
-          <video ref={videoRef} poster={item.poster} controls autoPlay loop playsInline />
+          <video ref={videoRef} poster={item.poster} controls autoPlay={autoplay} loop playsInline />
         ) : hasEmbed ? (
           <iframe
             className="embed"
@@ -128,7 +148,7 @@ export function PlayerModal({
               href={item.sourceUrl}
               onClick={(e) => {
                 e.preventDefault()
-                void window.peachwhip.app.openExternal(item.sourceUrl as string)
+                openExternal(item.sourceUrl as string)
               }}
             >
               open on {item.source} ↗

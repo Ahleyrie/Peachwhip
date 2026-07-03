@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { MediaItem } from '@shared/types'
+import { usePref } from '../prefs'
 
 function formatDuration(sec?: number): string | null {
   if (!sec || sec <= 0) return null
@@ -21,13 +22,19 @@ export function MediaCard({
 }): JSX.Element {
   const [hovering, setHovering] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [hoverPreview] = usePref('hoverPreview', true)
+  const [dataSaver] = usePref('dataSaver', false)
 
   // Reserve space using the item's aspect ratio so the masonry doesn't jump
   // while thumbnails load.
   const ratio = item.width && item.height ? `${item.width} / ${item.height}` : '3 / 4'
   const dur = formatDuration(item.duration)
   // Hover-preview only for progressive MP4s; HLS (.m3u8) can't play in a bare <video>.
-  const canPreview = !!item.streamUrl && !/\.m3u8($|\?)/i.test(item.streamUrl)
+  const canPreview =
+    hoverPreview &&
+    !dataSaver &&
+    !!item.streamUrl &&
+    !/\.m3u8($|\?)/i.test(item.streamUrl)
 
   return (
     <div

@@ -1,5 +1,6 @@
 import type { MediaItem } from '@shared/types'
 import { MediaCard } from './MediaCard'
+import { usePref } from '../prefs'
 
 export function MediaGrid({
   items,
@@ -12,8 +13,9 @@ export function MediaGrid({
   favKeys: Set<string>
   onToggleFav: (item: MediaItem) => void
 }): JSX.Element {
+  const [cols] = usePref('gridCols', 0)
   return (
-    <div className="grid">
+    <div className="grid" style={cols > 0 ? { columnCount: cols } : undefined}>
       {items.map((item) => (
         <MediaCard
           key={`${item.source}:${item.id}`}

@@ -39,7 +39,8 @@ const api = {
   },
   app: {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
-    openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url)
+    openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url),
+    clearCache: (): Promise<void> => ipcRenderer.invoke('app:clearCache')
   },
   settings: {
     get: (key: string): Promise<string | undefined> => ipcRenderer.invoke('settings:get', key),

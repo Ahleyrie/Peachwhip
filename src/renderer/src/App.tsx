@@ -6,6 +6,9 @@ import { UpdateButton } from './components/UpdateButton'
 import { RedditLogin } from './components/RedditLogin'
 import { ComicsView } from './components/ComicsView'
 import { IndexView } from './components/IndexView'
+import { ThemeApplier } from './components/ThemeApplier'
+import { SettingsModal } from './components/SettingsModal'
+import { getPref, setPref, usePref } from './prefs'
 import logo from './assets/logo.png'
 
 const FAV_TAB = '__favorites__'
@@ -31,6 +34,9 @@ export function App(): JSX.Element {
 
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [version, setVersion] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [disabledSources] = usePref<string[]>('disabledSources', [])
+  const visibleSources = sources.filter((s) => !disabledSources.includes(s.id))
 
   const active = sources.find((s) => s.id === activeId)
   const isReddit = active?.id === 'reddit'
@@ -46,12 +52,23 @@ export function App(): JSX.Element {
     void window.peachwhip.favorites.keys().then((keys) => setFavKeys(new Set(keys)))
     void window.peachwhip.media.sources().then((list) => {
       setSources(list)
-      if (list.length) {
+      const special = [COMICS_TAB, FAV_TAB, INDEX_TAB]
+      const last = getPref('rememberLastTab', true) ? getPref('lastTab', '') : ''
+      if (last && (special.includes(last) || list.some((s) => s.id === last))) {
+        setActiveId(last)
+        const src = list.find((s) => s.id === last)
+        setOrder(src ? src.defaultOrder : '')
+      } else if (list.length) {
         setActiveId(list[0].id)
         setOrder(list[0].defaultOrder)
       }
     })
   }, [])
+
+  // Persist the last-open tab.
+  useEffect(() => {
+    if (activeId && getPref('rememberLastTab', true)) setPref('lastTab', activeId)
+  }, [activeId])
 
   useEffect(() => {
     if (!isReddit) return
@@ -181,6 +198,7 @@ export function App(): JSX.Element {
 
   return (
     <div className="app">
+      <ThemeApplier />
       <header className="topbar">
         <div className="brand">
           <img className="brand-logo" src={logo} alt="" />
@@ -188,7 +206,7 @@ export function App(): JSX.Element {
         </div>
 
         <nav className="tabs">
-          {sources.map((s) => (
+          {visibleSources.map((s) => (
             <button
               key={s.id}
               className={`tab ${s.id === activeId ? 'active' : ''}`}
@@ -252,6 +270,9 @@ export function App(): JSX.Element {
             </button>
           )}
           <UpdateButton />
+          <button className="update-btn" onClick={() => setShowSettings(true)} title="Settings">
+            ⚙
+          </button>
           <span>v{version}</span>
         </div>
       </header>
@@ -297,6 +318,14 @@ export function App(): JSX.Element {
           onClose={() => setSelected(null)}
           isFav={favKeys.has(`${selected.source}:${selected.id}`)}
           onToggleFav={toggleFav}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsModal
+          sources={sources}
+          version={version}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>

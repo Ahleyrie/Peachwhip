@@ -1,0 +1,227 @@
+import { useState } from 'react'
+import type { SourceInfo } from '@shared/types'
+import { exportPrefs, importPrefs, resetPrefs, usePref } from '../prefs'
+
+const ACCENTS: { name: string; a: string; b: string }[] = [
+  { name: 'Peach', a: '', b: '' },
+  { name: 'Rose', a: '#ff5c8a', b: '#ff9770' },
+  { name: 'Cyan', a: '#38e0d0', b: '#4aa3ff' },
+  { name: 'Violet', a: '#a06bff', b: '#ff6bd6' },
+  { name: 'Green', a: '#57d977', b: '#aecb4e' },
+  { name: 'Gold', a: '#ffcf5c', b: '#ff9f43' }
+]
+
+function Toggle({
+  k,
+  def,
+  label
+}: {
+  k: string
+  def: boolean
+  label: string
+}): JSX.Element {
+  const [v, setV] = usePref(k, def)
+  return (
+    <label className="set-row">
+      <span>{label}</span>
+      <input type="checkbox" checked={v} onChange={(e) => setV(e.target.checked)} />
+    </label>
+  )
+}
+
+function Range({
+  k,
+  def,
+  min,
+  max,
+  step,
+  label,
+  suffix
+}: {
+  k: string
+  def: number
+  min: number
+  max: number
+  step?: number
+  label: string
+  suffix?: string
+}): JSX.Element {
+  const [v, setV] = usePref(k, def)
+  return (
+    <label className="set-row">
+      <span>
+        {label} <b>{v === 0 && k === 'gridCols' ? 'auto' : `${v}${suffix || ''}`}</b>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step || 1}
+        value={v}
+        onChange={(e) => setV(Number(e.target.value))}
+      />
+    </label>
+  )
+}
+
+export function SettingsModal({
+  sources,
+  version,
+  onClose
+}: {
+  sources: SourceInfo[]
+  version: string
+  onClose: () => void
+}): JSX.Element {
+  const [theme, setTheme] = usePref('theme', 'warm')
+  const [accent, setAccent] = usePref('accent', '')
+  const [, setAccent2] = usePref('accent2', '')
+  const [bg, setBg] = usePref<string>('bgImage', '')
+  const [disabled, setDisabled] = usePref<string[]>('disabledSources', [])
+  const [importMsg, setImportMsg] = useState('')
+
+  const toggleSource = (id: string): void => {
+    setDisabled(disabled.includes(id) ? disabled.filter((x) => x !== id) : [...disabled, id])
+  }
+
+  const doExport = (): void => {
+    const blob = new Blob([JSON.stringify(exportPrefs(), null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'peachwhip-settings.json'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  const doImport = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    file.text().then((t) => {
+      try {
+        importPrefs(JSON.parse(t))
+        setImportMsg('Imported ✓')
+      } catch {
+        setImportMsg('Invalid file')
+      }
+    })
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="settings" onClick={(e) => e.stopPropagation()}>
+        <div className="settings-head">
+          <h2>Settings</h2>
+          <button className="close-x" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <div className="settings-body">
+          <section>
+            <h3>Appearance</h3>
+            <label className="set-row">
+              <span>Theme</span>
+              <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+                <option value="warm">Warm (default)</option>
+                <option value="light">Light</option>
+                <option value="amoled">AMOLED black</option>
+              </select>
+            </label>
+            <div className="set-row">
+              <span>Accent</span>
+              <div className="swatches">
+                {ACCENTS.map((c) => (
+                  <button
+                    key={c.name}
+                    title={c.name}
+                    className={`swatch ${accent === c.a ? 'on' : ''}`}
+                    style={{
+                      background: c.a
+                        ? `linear-gradient(135deg, ${c.a}, ${c.b})`
+                        : 'linear-gradient(135deg, #fa5c6b, #f6a15c)'
+                    }}
+                    onClick={() => {
+                      setAccent(c.a)
+                      setAccent2(c.b)
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <Range k="fontScale" def={100} min={80} max={140} label="Font size" suffix="%" />
+            <Range k="radius" def={14} min={0} max={24} label="Corner radius" suffix="px" />
+            <Range k="gridCols" def={0} min={0} max={8} label="Grid columns" />
+            <Toggle k="compact" def={false} label="Compact spacing" />
+            <Toggle k="reducedMotion" def={false} label="Reduce motion" />
+            <label className="set-row">
+              <span>Background image URL</span>
+              <input
+                type="text"
+                value={bg}
+                placeholder="https://…"
+                onChange={(e) => setBg(e.target.value)}
+              />
+            </label>
+          </section>
+
+          <section>
+            <h3>Behavior</h3>
+            <Toggle k="autoplayOnOpen" def={true} label="Autoplay when opening a video" />
+            <Toggle k="muteByDefault" def={false} label="Mute videos by default" />
+            <Toggle k="rememberVolume" def={true} label="Remember volume" />
+            <Toggle k="hoverPreview" def={true} label="Hover-preview videos in the grid" />
+            <Toggle k="glanceBlur" def={false} label="Glance-safe (blur thumbnails until hover)" />
+            <Toggle k="confirmExternal" def={false} label="Confirm before opening external links" />
+            <Toggle k="hideSeen" def={false} label="Hide items you've already opened" />
+            <Toggle k="dataSaver" def={false} label="Data saver (skip hover video previews)" />
+          </section>
+
+          <section>
+            <h3>Startup</h3>
+            <Toggle k="rememberLastTab" def={true} label="Reopen the last tab on launch" />
+          </section>
+
+          <section>
+            <h3>Sources</h3>
+            {sources.map((s) => (
+              <label key={s.id} className="set-row">
+                <span>{s.label}</span>
+                <input
+                  type="checkbox"
+                  checked={!disabled.includes(s.id)}
+                  onChange={() => toggleSource(s.id)}
+                />
+              </label>
+            ))}
+          </section>
+
+          <section>
+            <h3>Data</h3>
+            <div className="set-actions">
+              <button className="update-btn" onClick={() => window.peachwhip.app.clearCache()}>
+                Clear cache
+              </button>
+              <button className="update-btn" onClick={doExport}>
+                Export settings
+              </button>
+              <label className="update-btn file-btn">
+                Import settings
+                <input type="file" accept="application/json" onChange={doImport} hidden />
+              </label>
+              <button
+                className="update-btn danger"
+                onClick={() => {
+                  if (confirm('Reset all settings to defaults?')) resetPrefs()
+                }}
+              >
+                Reset all
+              </button>
+            </div>
+            {importMsg && <p className="set-note">{importMsg}</p>}
+          </section>
+
+          <p className="set-note">Peachwhip v{version} · settings are stored locally on your device.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
