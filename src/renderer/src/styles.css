@@ -98,6 +98,73 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
+/* Skeletons */
+.skel-card {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  border-radius: var(--radius);
+  background: linear-gradient(100deg, var(--bg-elev) 30%, var(--bg-elev-2) 50%, var(--bg-elev) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite linear;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Onboarding */
+.onb {
+  width: min(480px, 92vw);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+}
+.onb h1 {
+  margin: 14px 0 6px;
+  font-size: 24px;
+}
+.onb p {
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+.onb-tips {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 20px;
+  padding-left: 20px;
+}
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.stat {
+  background: var(--bg-elev-2);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.stat b {
+  display: block;
+  font-size: 22px;
+  color: var(--coral);
+}
+.stat span {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 /* Command palette */
 .palette {
   width: min(560px, 92vw);

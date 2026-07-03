@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SourceInfo } from '@shared/types'
 import { exportPrefs, getPref, importPrefs, resetPrefs, setPref, usePref } from '../prefs'
+import { getList } from '../lists'
 import { simpleHash } from '../util'
 
 const ACCENTS: { name: string; a: string; b: string }[] = [
@@ -81,6 +82,30 @@ export function SettingsModal({
   const [disabled, setDisabled] = usePref<string[]>('disabledSources', [])
   const [importMsg, setImportMsg] = useState('')
   const [pin, setPin] = useState('')
+  const [stats, setStats] = useState<{ pies: number; history: number; watch: number; downloads: number; topTags: string[] }>(
+    { pies: 0, history: 0, watch: 0, downloads: 0, topTags: [] }
+  )
+
+  useEffect(() => {
+    void Promise.all([window.peachwhip.favorites.list(), window.peachwhip.downloads.list()]).then(
+      ([favs, dls]) => {
+        const hist = getList('history')
+        const counts: Record<string, number> = {}
+        hist.forEach((i) => i.tags?.forEach((t) => (counts[t] = (counts[t] || 0) + 1)))
+        const topTags = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)
+          .map(([t]) => t)
+        setStats({
+          pies: favs.length,
+          history: hist.length,
+          watch: getList('watchlater').length,
+          downloads: dls.length,
+          topTags
+        })
+      }
+    )
+  }, [])
 
   const toggleSource = (id: string): void => {
     setDisabled(disabled.includes(id) ? disabled.filter((x) => x !== id) : [...disabled, id])
@@ -271,6 +296,31 @@ export function SettingsModal({
               </button>
             </div>
             {importMsg && <p className="set-note">{importMsg}</p>}
+          </section>
+
+          <section>
+            <h3>Stats</h3>
+            <div className="stats-grid">
+              <div className="stat">
+                <b>{stats.pies}</b>
+                <span>Pies</span>
+              </div>
+              <div className="stat">
+                <b>{stats.history}</b>
+                <span>Watched</span>
+              </div>
+              <div className="stat">
+                <b>{stats.watch}</b>
+                <span>Queued</span>
+              </div>
+              <div className="stat">
+                <b>{stats.downloads}</b>
+                <span>Downloads</span>
+              </div>
+            </div>
+            {stats.topTags.length > 0 && (
+              <p className="set-note">Top tags: {stats.topTags.join(' · ')}</p>
+            )}
           </section>
 
           <p className="set-note">Peachwhip v{version} · settings are stored locally on your device.</p>

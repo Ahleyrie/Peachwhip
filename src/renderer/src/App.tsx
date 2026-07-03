@@ -12,6 +12,8 @@ import { FavoritesView } from './components/FavoritesView'
 import { LockGate } from './components/LockGate'
 import { Toasts } from './components/Toasts'
 import { CmdPalette } from './components/CmdPalette'
+import { Onboarding } from './components/Onboarding'
+import { Skeleton } from './components/Skeleton'
 import { toast } from './toast'
 import { getPref, setPref, usePref } from './prefs'
 import { addToList, getSeen, markSeen } from './lists'
@@ -260,6 +262,7 @@ export function App(): JSX.Element {
     <div className="app">
       <ThemeApplier />
       <LockGate />
+      <Onboarding />
       <header className="topbar">
         <div className="brand">
           <img className="brand-logo" src={logo} alt="" />
@@ -382,7 +385,7 @@ export function App(): JSX.Element {
             </div>
           </div>
         ) : items.length === 0 && loading ? (
-          <div className="center">Loading…</div>
+          <Skeleton />
         ) : items.length === 0 ? (
           <div className="center">
             {isFavView ? 'No favorites yet — tap ♡ on anything to save it.' : 'No results.'}

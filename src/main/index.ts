@@ -111,10 +111,23 @@ async function installTubeConsentCookies(): Promise<void> {
   ])
 }
 
+function savedBounds(): { width: number; height: number; x?: number; y?: number } {
+  try {
+    const raw = getSetting('windowBounds')
+    if (raw) return JSON.parse(raw)
+  } catch {
+    /* ignore */
+  }
+  return { width: 1280, height: 820 }
+}
+
 function createWindow(): void {
+  const b = savedBounds()
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    width: b.width,
+    height: b.height,
+    x: b.x,
+    y: b.y,
     minWidth: 940,
     minHeight: 600,
     backgroundColor: '#0e0b10',
@@ -139,6 +152,13 @@ function createWindow(): void {
   mainWindow.webContents.on('will-navigate', (e) => e.preventDefault())
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
+  mainWindow.on('close', () => {
+    try {
+      if (mainWindow) setSetting('windowBounds', JSON.stringify(mainWindow.getBounds()))
+    } catch {
+      /* ignore */
+    }
+  })
   mainWindow.on('closed', () => {
     mainWindow = null
   })
