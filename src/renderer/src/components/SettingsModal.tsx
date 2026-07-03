@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { SourceInfo } from '@shared/types'
-import { exportPrefs, importPrefs, resetPrefs, usePref } from '../prefs'
+import { exportPrefs, getPref, importPrefs, resetPrefs, setPref, usePref } from '../prefs'
+import { simpleHash } from '../util'
 
 const ACCENTS: { name: string; a: string; b: string }[] = [
   { name: 'Peach', a: '', b: '' },
@@ -79,6 +80,7 @@ export function SettingsModal({
   const [bg, setBg] = usePref<string>('bgImage', '')
   const [disabled, setDisabled] = usePref<string[]>('disabledSources', [])
   const [importMsg, setImportMsg] = useState('')
+  const [pin, setPin] = useState('')
 
   const toggleSource = (id: string): void => {
     setDisabled(disabled.includes(id) ? disabled.filter((x) => x !== id) : [...disabled, id])
@@ -182,6 +184,40 @@ export function SettingsModal({
           </section>
 
           <section>
+            <h3>Privacy</h3>
+            <Toggle k="blurOnBlur" def={false} label="Blur the app when it loses focus" />
+            <Toggle k="incognito" def={false} label="Incognito — don't record history" />
+            <div className="set-row">
+              <span>
+                PIN lock <b>{getPref('pinHash', '') ? 'on' : 'off'}</b>
+              </span>
+              <span className="pin-set">
+                <input
+                  type="password"
+                  value={pin}
+                  placeholder="New PIN"
+                  onChange={(e) => setPin(e.target.value)}
+                />
+                <button
+                  className="update-btn"
+                  onClick={() => {
+                    if (pin) {
+                      setPref('pinHash', simpleHash(pin))
+                      setPin('')
+                    }
+                  }}
+                >
+                  Set
+                </button>
+                <button className="update-btn" onClick={() => setPref('pinHash', '')}>
+                  Off
+                </button>
+              </span>
+            </div>
+            <p className="set-note">Panic hotkey: Ctrl+Shift+H instantly hides/shows the window.</p>
+          </section>
+
+          <section>
             <h3>Sources</h3>
             {sources.map((s) => (
               <label key={s.id} className="set-row">
@@ -215,6 +251,22 @@ export function SettingsModal({
                 }}
               >
                 Reset all
+              </button>
+              <button
+                className="update-btn danger"
+                onClick={async () => {
+                  if (
+                    confirm(
+                      'Erase ALL data — settings, pies, history, cookies, and cache? This cannot be undone.'
+                    )
+                  ) {
+                    await window.peachwhip.app.clearData()
+                    localStorage.clear()
+                    location.reload()
+                  }
+                }}
+              >
+                Erase all data
               </button>
             </div>
             {importMsg && <p className="set-note">{importMsg}</p>}

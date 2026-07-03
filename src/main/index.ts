@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { app, BrowserWindow, net, session } from 'electron'
+import { app, BrowserWindow, globalShortcut, net, session } from 'electron'
 import { registerIpc } from './ipc'
 import { setupUpdater } from './updater'
 import { initCore } from './core/registry'
@@ -153,10 +153,23 @@ app.whenReady().then(() => {
   setupUpdater(getWindow)
   createWindow()
 
+  // Panic hotkey: instantly hide/show the window (recoverable with the same keys).
+  globalShortcut.register('CommandOrControl+Shift+H', () => {
+    const w = mainWindow
+    if (!w) return
+    if (w.isVisible()) w.hide()
+    else {
+      w.show()
+      w.focus()
+    }
+  })
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+app.on('will-quit', () => globalShortcut.unregisterAll())
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

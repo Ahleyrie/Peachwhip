@@ -40,7 +40,8 @@ const api = {
   app: {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url),
-    clearCache: (): Promise<void> => ipcRenderer.invoke('app:clearCache')
+    clearCache: (): Promise<void> => ipcRenderer.invoke('app:clearCache'),
+    clearData: (): Promise<void> => ipcRenderer.invoke('app:clearData')
   },
   settings: {
     get: (key: string): Promise<string | undefined> => ipcRenderer.invoke('settings:get', key),

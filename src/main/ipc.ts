@@ -11,9 +11,15 @@ import {
   listComicSources
 } from './core/comics/registry'
 import { checkForUpdates, quitAndInstall } from './updater'
-import { getSetting, setSetting } from './settings'
+import { clearAllSettings, getSetting, setSetting } from './settings'
 import { isRedditLoggedIn, openRedditLogin, redditLogout } from './reddit-auth'
-import { addFavorite, favoriteKeys, listFavorites, removeFavorite } from './favorites'
+import {
+  addFavorite,
+  clearAllFavorites,
+  favoriteKeys,
+  listFavorites,
+  removeFavorite
+} from './favorites'
 import { streamTorrent, stopTorrent } from './torrent'
 import type { MediaItem } from '../shared/types'
 
@@ -60,6 +66,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     if (/^(https?|magnet):/i.test(url)) void shell.openExternal(url)
   })
   ipcMain.handle('app:clearCache', () => session.defaultSession.clearCache())
+  ipcMain.handle('app:clearData', async () => {
+    clearAllFavorites()
+    clearAllSettings()
+    await session.defaultSession.clearStorageData()
+    await session.defaultSession.clearCache()
+  })
 
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:install', () => {

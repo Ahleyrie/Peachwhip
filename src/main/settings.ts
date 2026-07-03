@@ -27,6 +27,15 @@ export function getSetting(key: string): string | undefined {
   return getSettings()[key]
 }
 
+export function clearAllSettings(): void {
+  cache = {}
+  try {
+    writeFileSync(file(), '{}')
+  } catch {
+    /* ignore */
+  }
+}
+
 export function setSetting(key: string, value: string | undefined): void {
   const s = getSettings()
   if (value === undefined || value === '') delete s[key]

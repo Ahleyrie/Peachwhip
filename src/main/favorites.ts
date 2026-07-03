@@ -53,3 +53,8 @@ export function removeFavorite(source: string, id: string): void {
   cache = load().filter((i) => !(i.source === source && i.id === id))
   save()
 }
+
+export function clearAllFavorites(): void {
+  cache = []
+  save()
+}

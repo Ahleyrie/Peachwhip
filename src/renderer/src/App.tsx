@@ -9,6 +9,7 @@ import { IndexView } from './components/IndexView'
 import { ThemeApplier } from './components/ThemeApplier'
 import { SettingsModal } from './components/SettingsModal'
 import { FavoritesView } from './components/FavoritesView'
+import { LockGate } from './components/LockGate'
 import { getPref, setPref, usePref } from './prefs'
 import { addToList, getSeen, markSeen } from './lists'
 import logo from './assets/logo.png'
@@ -37,6 +38,7 @@ export function App(): JSX.Element {
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [version, setVersion] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showTop, setShowTop] = useState(false)
   const [disabledSources] = usePref<string[]>('disabledSources', [])
   const visibleSources = sources.filter((s) => !disabledSources.includes(s.id))
 
@@ -124,9 +126,29 @@ export function App(): JSX.Element {
 
   const openItem = (item: MediaItem): void => {
     setSelected(item)
-    addToList('history', item)
-    markSeen(`${item.source}:${item.id}`)
+    if (!getPref('incognito', false)) {
+      addToList('history', item)
+      markSeen(`${item.source}:${item.id}`)
+    }
   }
+
+  const openRandom = (): void => {
+    if (items.length) openItem(items[Math.floor(Math.random() * items.length)])
+  }
+
+  // Blur the app when it loses focus (privacy).
+  useEffect(() => {
+    const onBlur = (): void => {
+      if (getPref('blurOnBlur', false)) document.documentElement.classList.add('blurred')
+    }
+    const onFocus = (): void => document.documentElement.classList.remove('blurred')
+    window.addEventListener('blur', onBlur)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener('blur', onBlur)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [])
 
   // Network sources: (re)load first page on source/order/query change (Reddit waits for login).
   useEffect(() => {
@@ -199,6 +221,7 @@ export function App(): JSX.Element {
   return (
     <div className="app">
       <ThemeApplier />
+      <LockGate />
       <header className="topbar">
         <div className="brand">
           <img className="brand-logo" src={logo} alt="" />
@@ -269,6 +292,9 @@ export function App(): JSX.Element {
               Reddit: log out
             </button>
           )}
+          <button className="update-btn" onClick={openRandom} title="Surprise me">
+            🎲
+          </button>
           <UpdateButton />
           <button className="update-btn" onClick={() => setShowSettings(true)} title="Settings">
             ⚙
@@ -284,7 +310,11 @@ export function App(): JSX.Element {
       ) : isFavView ? (
         <FavoritesView onOpen={openItem} favKeys={favKeys} onToggleFav={toggleFav} />
       ) : (
-        <main className="content" ref={contentRef}>
+        <main
+          className="content"
+          ref={contentRef}
+          onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 700)}
+        >
           {isReddit && redditLoggedIn === false ? (
           <RedditLogin onLoggedIn={() => setRedditLoggedIn(true)} />
         ) : isReddit && redditLoggedIn === null ? (
@@ -336,6 +366,16 @@ export function App(): JSX.Element {
           version={version}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {showTop && !isComics && !isIndex && !isFavView && (
+        <button
+          className="backtop"
+          title="Back to top"
+          onClick={() => contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          ↑
+        </button>
       )}
     </div>
   )
