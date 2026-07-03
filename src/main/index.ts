@@ -50,7 +50,19 @@ function installNhentaiHeaderInjection(): void {
 // webSecurity globally.
 function installStreamCorsHeaders(): void {
   session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.redd.it/*', '*://*.redgifs.com/*'] },
+    // redd.it/redgifs for HLS; JMComic CDNs so scrambled pages can be read into a
+    // <canvas> (de-scramble) without tainting it.
+    {
+      urls: [
+        '*://*.redd.it/*',
+        '*://*.redgifs.com/*',
+        '*://*.jmapiproxy1.cc/*',
+        '*://*.jmapiproxy2.cc/*',
+        '*://*.jmapiproxy3.net/*',
+        '*://*.jmapinodeudzn.net/*',
+        '*://*.jmdanjonproxy.vip/*'
+      ]
+    },
     (details, callback) => {
       const responseHeaders = { ...details.responseHeaders }
       responseHeaders['Access-Control-Allow-Origin'] = ['*']

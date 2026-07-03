@@ -8,12 +8,13 @@ import type {
   SourceContext
 } from '../../../shared/types'
 import { createNhentai } from './nhentai'
+import { createJmcomic } from './jmcomic'
 
 let sources: ComicSource[] = []
 let byId = new Map<string, ComicSource>()
 
 export function initComics(ctx: SourceContext): void {
-  sources = [createNhentai(ctx)]
+  sources = [createNhentai(ctx), createJmcomic(ctx)]
   byId = new Map(sources.map((s) => [s.id, s]))
 }
 

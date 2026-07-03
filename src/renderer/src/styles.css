@@ -652,7 +652,8 @@ body {
   padding-bottom: 40px;
 }
 
-.reader-scroll img {
+.reader-scroll img,
+.reader-scroll canvas {
   width: 100%;
   max-width: 820px;
   height: auto;

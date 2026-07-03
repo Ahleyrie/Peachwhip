@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ComicDetail } from '@shared/types'
+import { ComicPage } from './ComicPage'
 
 /** Full-screen continuous (webtoon-style) reader. Esc closes. */
 export function ComicReader({
@@ -42,7 +43,7 @@ export function ComicReader({
       </div>
       <div className="reader-scroll" ref={scrollRef} onScroll={onScroll}>
         {images.map((src, i) => (
-          <img key={i} src={src} loading="lazy" alt={`Page ${i + 1}`} draggable={false} />
+          <ComicPage key={i} src={src} />
         ))}
       </div>
     </div>
