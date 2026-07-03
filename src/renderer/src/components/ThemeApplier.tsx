@@ -12,6 +12,7 @@ export function ThemeApplier(): null {
   const [radius] = usePref('radius', 14)
   const [bg] = usePref<string>('bgImage', '')
   const [glance] = usePref('glanceBlur', false)
+  const [listView] = usePref('listView', false)
 
   useEffect(() => {
     const root = document.documentElement
@@ -19,6 +20,7 @@ export function ThemeApplier(): null {
     root.classList.toggle('compact', compact)
     root.classList.toggle('reduced-motion', reducedMotion)
     root.classList.toggle('glance', glance)
+    root.classList.toggle('listview', listView)
     root.style.fontSize = `${fontScale}%`
     root.style.setProperty('--radius', `${radius}px`)
 
@@ -42,7 +44,7 @@ export function ThemeApplier(): null {
       : ''
     document.body.style.backgroundSize = bg ? 'cover' : ''
     document.body.style.backgroundAttachment = bg ? 'fixed' : ''
-  }, [theme, accent, accent2, fontScale, compact, reducedMotion, radius, bg, glance])
+  }, [theme, accent, accent2, fontScale, compact, reducedMotion, radius, bg, glance, listView])
 
   return null
 }

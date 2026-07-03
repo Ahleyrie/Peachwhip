@@ -1,6 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MediaItem } from '@shared/types'
 import { usePref } from '../prefs'
+import { addToList, inList, removeFromList } from '../lists'
+import { openExternal } from '../util'
+import { toast } from '../toast'
 
 function formatDuration(sec?: number): string | null {
   if (!sec || sec <= 0) return null
@@ -24,6 +27,18 @@ export function MediaCard({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [hoverPreview] = usePref('hoverPreview', true)
   const [dataSaver] = usePref('dataSaver', false)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (!menu) return
+    const close = (): void => setMenu(null)
+    window.addEventListener('click', close)
+    window.addEventListener('scroll', close, true)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [menu])
 
   // Reserve space using the item's aspect ratio so the masonry doesn't jump
   // while thumbnails load.
@@ -40,6 +55,10 @@ export function MediaCard({
     <div
       className="card"
       onClick={() => onOpen(item)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        setMenu({ x: e.clientX, y: e.clientY })
+      }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => {
         setHovering(false)
@@ -83,6 +102,54 @@ export function MediaCard({
             item.tags?.slice(0, 2).map((t) => <span key={t}>{t}</span>)}
         </div>
       </div>
+
+      {menu && (
+        <div
+          className="ctx-menu"
+          style={{ left: menu.x, top: menu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              onToggleFav(item)
+              toast(isFav ? 'Removed from Pies' : 'Added to Pies 🍑')
+              setMenu(null)
+            }}
+          >
+            {isFav ? 'Remove from Pies' : 'Add to Pies'}
+          </button>
+          <button
+            onClick={() => {
+              const has = inList('watchlater', item)
+              if (has) removeFromList('watchlater', item)
+              else addToList('watchlater', item)
+              toast(has ? 'Removed from Watch later' : 'Saved to Watch later')
+              setMenu(null)
+            }}
+          >
+            Watch later
+          </button>
+          <button
+            onClick={() => {
+              void navigator.clipboard.writeText(item.sourceUrl || item.streamUrl || '')
+              toast('Link copied')
+              setMenu(null)
+            }}
+          >
+            Copy link
+          </button>
+          {item.sourceUrl && (
+            <button
+              onClick={() => {
+                openExternal(item.sourceUrl as string)
+                setMenu(null)
+              }}
+            >
+              Open on {item.source} ↗
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -153,6 +153,7 @@ export function SettingsModal({
             <Range k="radius" def={14} min={0} max={24} label="Corner radius" suffix="px" />
             <Range k="gridCols" def={0} min={0} max={8} label="Grid columns" />
             <Toggle k="compact" def={false} label="Compact spacing" />
+            <Toggle k="listView" def={false} label="List view (rows instead of grid)" />
             <Toggle k="reducedMotion" def={false} label="Reduce motion" />
             <label className="set-row">
               <span>Background image URL</span>

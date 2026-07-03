@@ -10,6 +10,8 @@ import { ThemeApplier } from './components/ThemeApplier'
 import { SettingsModal } from './components/SettingsModal'
 import { FavoritesView } from './components/FavoritesView'
 import { LockGate } from './components/LockGate'
+import { Toasts } from './components/Toasts'
+import { toast } from './toast'
 import { getPref, setPref, usePref } from './prefs'
 import { addToList, getSeen, markSeen } from './lists'
 import logo from './assets/logo.png'
@@ -201,10 +203,12 @@ export function App(): JSX.Element {
     if (next.has(k)) {
       await window.peachwhip.favorites.remove(item.source, item.id)
       next.delete(k)
+      toast('Removed from Pies')
       if (isFavView) setItems((prev) => prev.filter((i) => `${i.source}:${i.id}` !== k))
     } else {
       await window.peachwhip.favorites.add(item)
       next.add(k)
+      toast('Added to Pies 🍑')
     }
     setFavKeys(next)
   }
@@ -377,6 +381,8 @@ export function App(): JSX.Element {
           ↑
         </button>
       )}
+
+      <Toasts />
     </div>
   )
 }
