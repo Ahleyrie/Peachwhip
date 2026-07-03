@@ -71,6 +71,9 @@ export function MediaCard({
         <div className="card-sub">
           {item.author && <span>@{item.author}</span>}
           {typeof item.views === 'number' && <span>{item.views.toLocaleString()} views</span>}
+          {!item.author &&
+            !item.views &&
+            item.tags?.slice(0, 2).map((t) => <span key={t}>{t}</span>)}
         </div>
       </div>
     </div>

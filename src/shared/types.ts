@@ -20,6 +20,8 @@ export interface MediaItem {
   streamUrl?: string
   /** Embed-player page URL (used when there's no direct stream, e.g. tube sites). */
   embedUrl?: string
+  /** Magnet URI for torrent items. */
+  magnet?: string
   /** Direct image URL for `image` items. */
   imageUrl?: string
   width?: number

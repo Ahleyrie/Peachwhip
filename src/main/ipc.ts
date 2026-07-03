@@ -14,6 +14,7 @@ import { checkForUpdates, quitAndInstall } from './updater'
 import { getSetting, setSetting } from './settings'
 import { isRedditLoggedIn, openRedditLogin, redditLogout } from './reddit-auth'
 import { addFavorite, favoriteKeys, listFavorites, removeFavorite } from './favorites'
+import { streamTorrent, stopTorrent } from './torrent'
 import type { MediaItem } from '../shared/types'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
@@ -51,9 +52,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     comicImages(sourceId, id, chapterId)
   )
 
+  ipcMain.handle('torrent:stream', (_e, magnet: string) => streamTorrent(magnet))
+  ipcMain.handle('torrent:stop', () => stopTorrent())
+
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('app:openExternal', (_e, url: string) => {
-    if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+    if (/^(https?|magnet):/i.test(url)) void shell.openExternal(url)
   })
 
   ipcMain.handle('update:check', () => checkForUpdates())

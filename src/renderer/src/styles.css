@@ -716,6 +716,40 @@ body {
   color: var(--coral);
 }
 
+.torrent-panel {
+  width: min(560px, 88vw);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 26px;
+  text-align: center;
+}
+
+.torrent-panel h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.torrent-meta {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.torrent-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.torrent-status {
+  margin-top: 14px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
 .player-info a {
   color: var(--coral);
   text-decoration: none;

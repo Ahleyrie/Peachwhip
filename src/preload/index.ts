@@ -33,6 +33,10 @@ const api = {
     images: (source: string, id: string, chapterId: string): Promise<string[]> =>
       ipcRenderer.invoke('comics:images', source, id, chapterId)
   },
+  torrent: {
+    stream: (magnet: string): Promise<string> => ipcRenderer.invoke('torrent:stream', magnet),
+    stop: (): Promise<void> => ipcRenderer.invoke('torrent:stop')
+  },
   app: {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url)

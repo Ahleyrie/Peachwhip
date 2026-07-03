@@ -7,6 +7,7 @@ import type { BrowseParams, Feed, Source, SourceContext, SourceInfo } from '../.
 import { createRedgifsClient, createRedgifsSource } from './sources/redgifs'
 import { createReddit } from './sources/reddit'
 import { createTube } from './sources/tube'
+import { createTorrents } from './sources/torrents'
 
 let sources: Source[] = []
 let byId = new Map<string, Source>()
@@ -14,7 +15,12 @@ let byId = new Map<string, Source>()
 function buildSources(ctx: SourceContext): Source[] {
   // RedGifs client is shared: it also resolves redgifs.com links inside Reddit posts.
   const redgifs = createRedgifsClient(ctx)
-  return [createRedgifsSource(redgifs), createReddit(ctx, redgifs), createTube(ctx)]
+  return [
+    createRedgifsSource(redgifs),
+    createReddit(ctx, redgifs),
+    createTube(ctx),
+    createTorrents(ctx)
+  ]
 }
 
 export function initCore(ctx: SourceContext): void {
