@@ -4,6 +4,7 @@ import { ComicReader } from './ComicReader'
 
 interface ReaderState {
   detail: ComicDetail
+  chapterId: string
   images: string[]
 }
 
@@ -21,6 +22,7 @@ export function ComicsView(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
 
   const [opening, setOpening] = useState(false)
+  const [detail, setDetail] = useState<ComicDetail | null>(null)
   const [reader, setReader] = useState<ReaderState | null>(null)
 
   const reqId = useRef(0)
@@ -91,15 +93,31 @@ export function ComicsView(): JSX.Element {
     setOpening(true)
     setError(null)
     try {
-      const detail = await window.peachwhip.comics.detail(summary.source, summary.id)
-      const chapter = detail.chapters[0]
-      const images = await window.peachwhip.comics.images(summary.source, summary.id, chapter.id)
-      setReader({ detail, images })
+      const d = await window.peachwhip.comics.detail(summary.source, summary.id)
+      setDetail(d)
     } catch (e) {
       setError((e as Error).message || 'Could not open comic')
     } finally {
       setOpening(false)
     }
+  }
+
+  const openChapter = async (d: ComicDetail, chapterId: string): Promise<void> => {
+    setOpening(true)
+    try {
+      const images = await window.peachwhip.comics.images(d.source, d.id, chapterId)
+      setReader({ detail: d, chapterId, images })
+    } catch (e) {
+      setError((e as Error).message || 'Could not load pages')
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  const runTag = (tag: string): void => {
+    setDetail(null)
+    setQueryInput(tag)
+    setActiveQuery(tag)
   }
 
   return (
@@ -178,8 +196,48 @@ export function ComicsView(): JSX.Element {
       </div>
 
       {opening && <div className="opening-overlay">Opening…</div>}
+
+      {detail && !reader && (
+        <div className="overlay" onClick={() => setDetail(null)}>
+          <div className="comic-detail" onClick={(e) => e.stopPropagation()}>
+            <button className="close-x cd-close" onClick={() => setDetail(null)}>
+              ✕
+            </button>
+            <img className="cd-cover" src={detail.cover} alt="" />
+            <div className="cd-info">
+              <h2>{detail.title}</h2>
+              {detail.description && <p className="cd-desc">{detail.description}</p>}
+              {detail.tags && detail.tags.length > 0 && (
+                <div className="cd-tags">
+                  {detail.tags.map((t) => (
+                    <button key={t} className="index-chip" onClick={() => runTag(t)}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="cd-chapters">
+                {detail.chapters.map((ch) => (
+                  <button key={ch.id} className="cd-chapter" onClick={() => openChapter(detail, ch.id)}>
+                    {ch.title}
+                    {ch.pageCount ? ` · ${ch.pageCount}p` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {reader && (
-        <ComicReader detail={reader.detail} images={reader.images} onClose={() => setReader(null)} />
+        <ComicReader
+          detail={reader.detail}
+          chapters={reader.detail.chapters}
+          chapterId={reader.chapterId}
+          images={reader.images}
+          onClose={() => setReader(null)}
+          onChangeChapter={(id) => openChapter(reader.detail, id)}
+        />
       )}
     </div>
   )

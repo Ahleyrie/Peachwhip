@@ -692,11 +692,168 @@ body {
 }
 
 .reader-scroll img,
-.reader-scroll canvas {
+.reader-scroll canvas,
+.reader-paged img,
+.reader-paged canvas {
   width: 100%;
   max-width: 820px;
   height: auto;
   display: block;
+}
+.reader-scroll.fit-height img,
+.reader-scroll.fit-height canvas {
+  width: auto;
+  max-width: 100%;
+  max-height: 100vh;
+}
+.reader-scroll.fit-original img,
+.reader-scroll.fit-original canvas {
+  width: auto;
+  max-width: none;
+}
+
+.reader-paged {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.reader-paged.fit-height img,
+.reader-paged.fit-height canvas {
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 52px);
+}
+.reader-paged.fit-original img,
+.reader-paged.fit-original canvas {
+  width: auto;
+  max-width: none;
+}
+
+.reader-btn,
+.reader-select {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.reader-btn.on {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+.reader-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.reader-jump {
+  width: 48px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 3px 4px;
+  font-size: 12px;
+  text-align: center;
+}
+.reader-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.reader-dim input {
+  width: 70px;
+  accent-color: var(--coral);
+}
+.reader-bar {
+  flex-wrap: wrap;
+}
+.reader-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.reader-progress > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--coral), var(--orange));
+}
+.reader-brightness {
+  position: absolute;
+  inset: 52px 0 0 0;
+  background: #000;
+  pointer-events: none;
+}
+
+/* Comic detail overlay */
+.comic-detail {
+  width: min(760px, 94vw);
+  max-height: 88vh;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px;
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+  position: relative;
+}
+.cd-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+}
+.cd-cover {
+  width: 220px;
+  border-radius: 12px;
+  object-fit: cover;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+.cd-info {
+  overflow-y: auto;
+}
+.cd-info h2 {
+  margin: 0 0 8px;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.cd-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.cd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.cd-chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cd-chapter {
+  text-align: left;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.cd-chapter:hover {
+  border-color: var(--coral);
 }
 
 /* ---- Settings modal ---- */
